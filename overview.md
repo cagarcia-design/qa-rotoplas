@@ -46,7 +46,7 @@ Ejercicio en 7 fases, replicando el patrón de B2B:
 5. **Capa 2 — correos** — **CERRADA para pagos (s16, 2026-06-08).** Cuenta `c.agarcia@rotoplas.com`, remitente `ventasecom@rotoplas.com`. **✅ VERIFICADOS:** bienvenida, confirmación de pedido (tarjeta, `6820261ZZA8`), reset de contraseña, newsletter, contacto auto-reply, 4 correos de status (confirmado/en camino/punto de entrega/entregado), **+ Transferencia/SPEI (`6820263SS52`, plantilla D + PDF SPEI)** y **+ Efectivo (`6820266FJM8`, plantilla E + voucher PayNet)** — 5 plantillas con defectos (BUG-535–564, ver Cierres s15/s16). **🚫 Reseñas: NO cerrable** — la publicación está rota (**BUG-566 ALTA**: `success:0` + falso toast; la reseña no persiste, así que no hay correo que verificar). **Fuera de alcance B2C:** correos de **status 30 (Cancelada) y 50 (Facturación Parcial)** — por decisión del usuario aplican a B2B, no se rastrean aquí.
 6. **III.8 Mobile** — **✅ CERRADO (s12):** (a) Lighthouse `device:mobile` Home 89/58/100/33 · PDP 77/58/92/33 estable vs desktop (III.6); (b) **nav institucional AUSENTE del menú móvil** — Conócenos/Blog/Recursos/Contacto/Amigo Plomero no accesibles desde el menú móvil (solo categorías + "Servicios" + "Prueba"TEST) → **BUG-528 (ALTA)**, evidencia `F4-05`. **Residual checkout móvil 3 pasos: ✅ CERRADO (s15)** — mapeado a fondo en `/checkout/[1-3]/` sin overflow X; reconfirma BUG-461/471/476/495 en móvil; +BUG-539/540. Evidencias `CAPA2-03/04/05`.
 7. **BUG-480** — **CERRADO s22 (falso positivo).** Tras múltiples compras con tarjeta/débito/transferencia/efectivo (s15–s22, órdenes `6820261ZZA8`, `6152026V42G2`, `6152026JTCVP`, `6152026YWVEB`, `61520269J0V3`) la sesión "Jorge Rotoplas" quedó intacta en TODAS. El logout post-compra NO se reproduce — fue un falso positivo.
-8. **F6** — DOM contracts ejecutables en `tests/contracts/b2c/`. **Cut 1 + s21 LISTOS:** health, links, content (s21), global-layout, home, pdp, **servicio-lavado wizard (s21)**, money-path `@auth`, capa2-pipeline. **Pendiente:** smoke journeys `@smoke` (completar compra E2E), cross-cutting `@xcut` (consola/links), contracts móviles y de `/customer`, activar CI. *(La matriz B2B↔B2C — antes Parte V — fue descartada por decisión del usuario el 2026-06-07.)*
+8. **F6** — DOM contracts ejecutables en `tests/` (la ruta histórica `tests/contracts/b2c/` se aplanó; corregido s25). **LISTOS:** health, links, content, global-layout, home, pdp, servicio-lavado wizard, forms, contacto, faq, distribuidores, legales, servicios, **`/customer` `@auth`**, money-path `@auth`, cart-empty `@auth`, capa2-pipeline. **Apta para producción (s25):** slug de PDP por ambiente, footer T&C tolerante al slash, y `@auth` hace *skip* limpio sin sesión → verde vs prod (68 passed · 11 skipped · 0 fallos). **Pendiente:** smoke journeys `@smoke` (completar compra E2E), cross-cutting `@xcut` (consola/links), contracts móviles, activar CI. *(La matriz B2B↔B2C — antes Parte V — fue descartada por decisión del usuario el 2026-06-07.)*
 
 > **Capa 2 autónoma — estado al cierre s18 (2026-06-11):** el check `@capa2` corre desatendido
 > vía `npm run check:b2c:capa2:auto` (crea orden por UI con `scripts/crear-orden-b2c.js` +
@@ -521,6 +521,8 @@ Recomendación: **(A)** si se quiere un handoff a dev con una sola lista prioriz
 ## Ambiente y credenciales
 
 - **URL QA:** `https://qarotoplasmx.io`
+- **URL Producción:** `https://rotoplas.com.mx` (verificada s25, 2026-06-16; la suite corre en prod en modo lectura — el dashboard la selecciona con el chip de ambiente).
+- **Commercetools:** las 6 llaves `CT_*` **NO se capturan en la UI del panel** (s25) — vienen del `.env` (un API Client compartido en privado, gitignored). `dotenv` las carga al arrancar; `ct-api.js` las lee directo. No son derivables de una sesión del Merchant Center.
 - **Cuenta PRIMARIA (desde 2026-06-08):** `c.agarcia@rotoplas.com` / `Rotoplas2026` — "Jorge Rotoplas". **Su inbox se lee con el Gmail MCP → habilita Capa 2 (correos transaccionales):** confirmación de pedido, instrucciones SPEI, reset de contraseña, double opt-in newsletter, auto-reply de contacto. Remitente transaccional B2C: `ventasecom@rotoplas.com` (correo de bienvenida ya verificado el 2026-06-08).
 - **Cuenta legacy:** `andrei.garcia@xideral.co` / `Rotoplas2027` — sigue válida pero su inbox (Xideral) NO es accesible aquí; usar solo para flujos que no requieran verificar correo.
 - **Sin bot detection** (a diferencia de B2B) — login directo con native value setter, sin `storageState` ni `--disable-blink-features=AutomationControlled`
@@ -627,6 +629,38 @@ Ya cargado en `/` antes de cualquier consentimiento:
 - `tickets/regresiones-smoke-b2c/inventario-ctas.md` — inventario consolidado (documento vivo)
 - `tickets/regresiones-smoke-b2c/evidencias/` — screenshots numerados por fase
 - `tickets/regresiones-smoke/inventario-ctas.md` — referencia B2B equivalente
+
+---
+
+## ✅ Cierre sesión 25 — Suite apta para PRODUCCIÓN + UI del panel + onboarding (2026-06-16)
+
+Sesión enfocada en **correr las validaciones contra producción desde el dashboard**, dejar la
+suite verde en prod, pulir la UI del panel y resolver el onboarding (clone + credenciales).
+**Sin bugs nuevos del sitio** (los hallazgos fueron de la propia suite/herramienta, no de prod).
+
+**Producción habilitada (`rotoplas.com.mx`):**
+- Corrida inicial vs prod arrojó 7 "rotos" → triage con DOM en vivo: **0 eran regresiones de prod**, todos *contract drift* o ambientales.
+- **Fixes (commit `b26ba04`):**
+  - `dashboard.js`: URL de prod corregida (estaba `rotoplasmx.com`, que no existe → `rotoplas.com.mx`).
+  - `_targets.js`: **slug de PDP por ambiente** — el slug QA `/product/BASE-PARA-TINACO/` en prod redirige a `/producto-no-disponible/` (200, pero no es PDP); prod usa `/product/Base-para-tinaco_310002/`.
+  - `1-global-layout`: footer T&C **tolerante al slash** (prod sirve `/terminos-y-condiciones/`).
+  - `2-money-path` + `2-cart-empty`: `@auth` hace **skip limpio** si no existe `rotoplas-auth-b2c.json` (antes erraba "Error reading storage state").
+- **Resultado vs prod:** **68 passed · 11 skipped · 0 fallos** (los 3 `✘` del baseline `bugConocido` son expected-fail). Verificado por CLI y en el dashboard ("Todo en pie").
+
+**UI del panel (commit `b26ba04`):**
+- "¿Responden y renderizan?" y "Formularios" ahora son **mosaicos `.zona`** iguales a "Estructura crítica".
+- **Todas las secciones colapsadas por defecto**; el auto-expand al correr ya no persiste.
+- Fix de bug latente: `restorePills` borraba el contenido del hero al restaurar el estado de "check-all" (se restaura con `setHero`).
+
+**Onboarding / distribución (commits `ae4a9d6`, `201307f`, `8bb1337`):**
+- `package.json`: **`postinstall: playwright install chromium`** → un clon nuevo queda listo con solo `npm install` (verificado con un clone real desde GitHub).
+- **Commercetools fuera de la UI de credenciales** — sus 6 `CT_*` vienen del `.env` (no de una sesión del Merchant Center; el `client_secret` no es derivable de un login). `dotenv` las carga y `saveEnv` las preserva. La UI ahora solo pide lo que cada usuario llena con SU cuenta: Sesión B2C + Gmail.
+- `.env` copiado del proyecto padre → CT funcionando local (token HTTP 200 verificado).
+- `GUIA-PARA-CORRER-EL-PANEL.md` reescrita concisa y al día.
+
+**Documentación (s25):** README corregido (URL prod, conteo de bugs 574→~551, referencias muertas a `tests/contracts/b2c/README.md` y `COBERTURA.md` eliminadas, chromium ahora vía postinstall); overview actualizado (este cierre + Ambiente + pendiente #8 con ruta `tests/`).
+
+**Gaps abiertos al cierre s25** (ver lista consolidada arriba, #8): smoke journeys `@smoke`, cross-cutting `@xcut`, contracts móviles, CI. **Onboarding:** `GMAIL_IMAP_PASS` (App Password) sigue faltando → correos en Modo A; `B2C_USER/B2C_PASS` no están en el `.env` → `@auth` se salta hasta generar sesión. **Sitio:** BUG-B2C-566 (reseñas rotas) sigue abierto. **Próximo bug ID: BUG-B2C-567.**
 
 ---
 

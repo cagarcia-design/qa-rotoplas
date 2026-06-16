@@ -1,17 +1,20 @@
 # QA Rotoplas — Smoke Tests B2C
 
-Suite autónoma de **pruebas de humo estructurales post-deploy** para `qarotoplasmx.io`.
-Detecta regresiones de DOM en segundos: botones que desaparecen, links rotos, secciones que
-dejan de renderizar. Todo corre con un panel web local, sin memorizar comandos.
+Suite autónoma de **pruebas de humo estructurales post-deploy** para el sitio B2C en
+**QA** (`qarotoplasmx.io`) y **Producción** (`rotoplas.com.mx`). Detecta regresiones de
+DOM en segundos: botones que desaparecen, links rotos, secciones que dejan de renderizar.
+Todo corre con un panel web local, sin memorizar comandos.
 
 ## Setup (primera vez, ~10 min)
 
 ```bash
 git clone https://github.com/cagarcia-design/qa-rotoplas.git
 cd qa-rotoplas
-npm install
-npx playwright install chromium
+npm install        # instala dependencias y descarga Chromium (postinstall)
 ```
+
+> `npm install` ya descarga el navegador (Chromium) por el `postinstall`. Si por alguna
+> razón faltara, córrelo a mano: `npx playwright install chromium`.
 
 ## Uso diario
 
@@ -34,8 +37,13 @@ Luego ya puedes correr `npm run check:b2c` completo (incluye carrito y checkout)
 
 ### Apuntar a otro ambiente (ej. producción)
 
+Desde el **panel**: usa el selector de ambiente arriba a la derecha (**QA / Producción**).
+En producción solo corren los checks de lectura; crear orden y correos quedan deshabilitados.
+
+Desde la **CLI**:
+
 ```bash
-B2C_BASE_URL=https://rotoplasmx.com npm run check:b2c
+B2C_BASE_URL=https://rotoplas.com.mx npm run check:b2c
 ```
 
 ## Estructura del proyecto
@@ -47,7 +55,7 @@ B2C_BASE_URL=https://rotoplasmx.com npm run check:b2c
 ├── playwright.config.js            ← Configuración de Playwright
 ├── setup-auth-b2c.js               ← Login → rotoplas-auth-b2c.json
 ├── overview.md                     ← Documento vivo del ticket (CAs, estado)
-├── bugs-b2c.md                     ← Inventario de bugs conocidos (574 bugs)
+├── bugs-b2c.md                     ← Inventario de bugs conocidos (~551 bugs)
 ├── inventario-ctas.md              ← Mapeo DOM exhaustivo del sitio
 ├── scripts/
 │   ├── dashboard.js                ← Panel web local (servidor HTTP)
@@ -81,14 +89,15 @@ B2C_BASE_URL=https://rotoplasmx.com npm run check:b2c
 
 ## Documentación de referencia
 
-- **Arquitectura completa:** `overview.md` (sección F6)
-- **Cómo leer un ROJO:** `tests/contracts/b2c/README.md` (sección "Cómo se mantiene")
-- **Cobertura de contratos:** `tests/contracts/b2c/COBERTURA.md`
-- **Guía para no-técnicos:** `GUIA-PARA-CORRER-EL-PANEL.md`
+- **Arquitectura completa + historial de sesiones:** `overview.md` (ADR en sección F6)
+- **Inventario DOM exhaustivo del sitio:** `inventario-ctas.md`
+- **Bugs conocidos (baseline):** `bugs-b2c.md`
+- **Guía para correr el panel:** `GUIA-PARA-CORRER-EL-PANEL.md`
 
 ## Requisitos
 
 - Node.js 18+
-- Playwright Chromium (`npx playwright install chromium`)
-- [Opcional] `.env` con `CT_CLIENT_ID` y `CT_CLIENT_SECRET` para consultas vía API
+- Chromium de Playwright (lo baja `npm install` vía postinstall)
+- [Opcional] `.env` con las 6 llaves `CT_*` (Commercetools) para estados de orden y correos.
+  **No se captura en el panel; viene del `.env` compartido en privado** (gitignored).
 - [Opcional] `.env` con `GMAIL_IMAP_USER` y `GMAIL_IMAP_PASS` para verificación de correos (Modo B)
