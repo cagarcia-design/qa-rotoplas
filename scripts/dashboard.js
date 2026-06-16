@@ -159,7 +159,7 @@ const AREAS = {
   'cuenta':        { label: 'Mi cuenta',         files: ['2-customer'],                    auth: true },
   'institucional': { label: 'Institucional',     files: ['1-contacto', '1-faq', '1-distribuidores', '1-legales'] },
 };
-const areaSpecPath = (f) => `tests/contracts/b2c/${f}.contract.spec.js`;
+const areaSpecPath = (f) => `tests/${f}.contract.spec.js`;
 
 const isOrder = (s) => typeof s === 'string' && /^[A-Za-z0-9]{5,24}$/.test(s);
 const imapMode = () => (process.env.GMAIL_IMAP_USER && process.env.GMAIL_IMAP_PASS ? 'B' : 'A');
