@@ -1,0 +1,16 @@
+node_modules/
+.env
+rotoplas-auth*.json
+*-auth*.json
+test-results/
+playwright-report/
+evidencias/
+*.png
+*.jpg
+*.jpeg
+*.mp4
+*.docx
+*.xlsx
+*.pdf
+*.log
+*.jsonl
