@@ -62,14 +62,9 @@ const ENV_FIELDS = [
     { key: 'GMAIL_IMAP_USER', label: 'Correo del buzón', secret: false, hint: 'p. ej. c.agarcia@rotoplas.com' },
     { key: 'GMAIL_IMAP_PASS', label: 'App Password (16 caracteres)', secret: true, hint: 'contraseña de aplicación de Gmail, NO la normal' },
   ]},
-  { group: 'Commercetools (estados de orden y disparo de correos)', items: [
-    { key: 'CT_PROJECT_KEY', label: 'Project key', secret: false },
-    { key: 'CT_CLIENT_ID', label: 'Client ID', secret: false },
-    { key: 'CT_CLIENT_SECRET', label: 'Client secret', secret: true },
-    { key: 'CT_API_HOST', label: 'API host', secret: false },
-    { key: 'CT_AUTH_URL', label: 'Auth URL', secret: false },
-    { key: 'CT_SCOPES', label: 'Scopes', secret: false },
-  ]},
+  // Commercetools: NO se captura en la UI. Sus 6 valores (CT_*) vienen del .env
+  // (un API Client compartido en privado entre el equipo). dotenv los carga al
+  // arrancar y saveEnv preserva esas líneas al guardar; ct-api.js las lee directo.
   { group: 'BrowserStack (mobile real · opcional)', items: [
     { key: 'BROWSERSTACK_USERNAME', label: 'Usuario', secret: false },
     { key: 'BROWSERSTACK_ACCESS_KEY', label: 'Access key', secret: true },
