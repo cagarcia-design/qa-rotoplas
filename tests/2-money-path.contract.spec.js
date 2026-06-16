@@ -13,11 +13,17 @@
 // items entre corridas → asertamos ">= 1 renglón", no un conteo exacto.
 
 const path = require('path');
+const fs = require('fs');
 const { test, expect, irA, seedCobertura } = require('./_helpers');
 const { PRODUCTO, COBERTURA_SEED } = require('./_targets');
 
 // Sesión autenticada B2C — sobreescribe el storageState anónimo del proyecto.
-test.use({ storageState: path.resolve(__dirname, '../rotoplas-auth-b2c.json') });
+// SOLO se aplica si el archivo de sesión existe: sin él, Playwright erraría al crear
+// el contexto ("Error reading storage state from ...") → un rojo engañoso. Sin sesión,
+// los tests hacen skip limpio (ámbar "omitido"), que es lo correcto: no es regresión.
+const AUTH_FILE = path.resolve(__dirname, '../rotoplas-auth-b2c.json');
+const HAY_SESION = fs.existsSync(AUTH_FILE);
+if (HAY_SESION) test.use({ storageState: AUTH_FILE });
 
 /**
  * Garantiza que el carrito tenga al menos un item, manejando la race entre la
@@ -41,6 +47,7 @@ async function asegurarItemEnCarrito(page) {
 }
 
 test.describe('@contract @auth Ruta del dinero (autenticada)', () => {
+  test.skip(!HAY_SESION, 'Sin sesión B2C (rotoplas-auth-b2c.json). Corre `npm run auth:b2c` para generarla. No es regresión del sitio.');
   // Estos tests mutan un carrito/cuenta COMPARTIDO → no pueden correr en paralelo
   // (se pisan entre sí). Modo serial: mismo worker, en orden. Los demás specs
   // (stateless) siguen corriendo en paralelo normalmente.

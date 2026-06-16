@@ -72,10 +72,13 @@ test.describe('@contract Cascarón global — Footer', () => {
 
     // Links legales — load-bearing por cumplimiento. Anclaje: href.
     // .first(): el footer se renderiza duplicado en el DOM (BUG-B2C-005).
+    // Tolerante al slash final: QA sirve /terminos-y-condiciones, prod lo sirve como
+    // /terminos-y-condiciones/ (verificado 2026-06-16). El link existe en ambos; lo que
+    // cambia es el trailing slash → matchear ambas formas evita un falso positivo.
     const legales = ['/aviso-de-privacidad', '/terminos-y-condiciones'];
     for (const href of legales) {
       await expect(
-        page.locator(`footer a[href="${href}"]`).first(),
+        page.locator(`footer a[href="${href}"], footer a[href="${href}/"]`).first(),
         `Footer: falta link legal ${href}`
       ).toBeAttached();
     }

@@ -30,10 +30,16 @@ const abs = (path) => new URL(path, BASE).toString();
 // (solo el SKU bajo prueba) para que la PDP sea DETERMINISTA. Verificado en vivo
 // 2026-06-07 vía DevTools. Es un fixture controlado, no datos reales del usuario.
 // ─────────────────────────────────────────────────────────────────────────
+// El slug de la PDP difiere por ambiente: QA usa el slug "limpio" en mayúsculas,
+// mientras que PROD lo sirve como Nombre-con-guiones_SKU. El slug QA en prod
+// redirige a /producto-no-disponible/ (200, pero NO es la PDP) → verificado en vivo
+// 2026-06-16. Se elige por hostname para que el contract apunte a la PDP real en
+// cada ambiente. Si el catálogo cambia el SKU de prueba, se edita aquí y nada más.
+const IS_PROD = /rotoplas\.com\.mx/i.test(BASE);
 const PRODUCTO = {
   nombre: 'Base para tinaco GDPV',
   sku: '310002',
-  slug: '/product/BASE-PARA-TINACO/',
+  slug: IS_PROD ? '/product/Base-para-tinaco_310002/' : '/product/BASE-PARA-TINACO/',
   cp: '02800',
 };
 
@@ -93,8 +99,8 @@ const HEALTH_URLS = [
   { nombre: 'Categoría — Tratamiento', url: abs('/products/tratamiento/') },
   { nombre: 'Categoría — Calentamiento', url: abs('/products/calentamiento/') },
   { nombre: 'Categoría — Conducción', url: abs('/products/conduccion/') },
-  // PDP representativa (plantilla de producto)
-  { nombre: 'PDP (plantilla)', url: abs('/product/BASE-PARA-TINACO/') },
+  // PDP representativa (plantilla de producto) — slug por ambiente (ver PRODUCTO.slug)
+  { nombre: 'PDP (plantilla)', url: abs(PRODUCTO.slug) },
   // Ruta transaccional
   { nombre: 'Carrito', url: abs('/cart/') },
   { nombre: 'Checkout paso 1', url: abs('/checkout/1/') },

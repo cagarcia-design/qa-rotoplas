@@ -39,7 +39,7 @@ const PORT = Number(process.env.DASH_PORT || 4599);
 // Commercetools/IMAP (order-*, move-state, IMAP) son independientes del sitio.
 const ENVS = {
   qa:   { label: 'QA',          base: 'https://qarotoplasmx.io' },
-  prod: { label: 'Producción',  base: 'https://rotoplasmx.com' },
+  prod: { label: 'Producción',  base: 'https://rotoplas.com.mx' },
 };
 const BASE_QA = ENVS.qa.base; // compat (conteo de health, etc.)
 const envBase = (e) => (ENVS[e] ? ENVS[e].base : ENVS.qa.base);
@@ -853,7 +853,7 @@ const PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8">
    <button class="detalle" data-target="log-config">ver detalle técnico <span class="ar">▾</span></button>
    <pre class="log" id="log-config"></pre>
   </section>
-  <section class="card" id="cardChecks">
+  <section class="card collapsed" id="cardChecks">
    <div class="card-h" data-toggle="cardChecks">
     <span class="cic"><svg viewBox="0 0 24 24"><path d="M3 12h4l2.5 7 4-15 2.5 8H21"/></svg></span>
     <h2>Checks estructurales</h2>
@@ -861,14 +861,19 @@ const PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8">
     <span class="card-chev"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span>
    </div>
    <p class="card-sub">¿Sigue en pie lo crítico del sitio? Detecta elementos, links o secciones que se rompen tras un deploy.</p>
-    <ul class="checks">
-     <li><span class="nm">¿Responden y renderizan?<small id="healthSub">16 URLs · responden 200 y pintan contenido</small></span>
-         <button class="btn-run" data-action="responde" data-st="st-responde" data-log="log-checks" data-live="live-checks"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Correr</button>
-         <span class="pill" id="st-responde"><span class="d"></span>—</span></li>
-     <li><span class="nm">Formularios<small>login · registro · recuperar · seguimiento</small></span>
-         <button class="btn-run" data-action="forms" data-st="st-forms" data-log="log-checks" data-live="live-checks"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Correr</button>
-         <span class="pill" id="st-forms"><span class="d"></span>—</span></li>
-    </ul>
+    <div class="areahead">
+     <span class="nm">Respuesta y formularios</span>
+    </div>
+    <div class="zona-grid">
+     <button class="zona" id="z-responde" data-action="responde" data-st="st-responde" data-log="log-checks" data-live="live-checks" title="¿Responden y renderizan? — 16 URLs responden 200 y pintan contenido">
+      <span class="pill" id="st-responde"><span class="d"></span> —</span>
+      <span class="znm">¿Responden y renderizan?</span>
+     </button>
+     <button class="zona" data-action="forms" data-st="st-forms" data-log="log-checks" data-live="live-checks" title="Formularios — login · registro · recuperar · seguimiento">
+      <span class="pill" id="st-forms"><span class="d"></span> —</span>
+      <span class="znm">Formularios</span>
+     </button>
+    </div>
     <div class="areahead">
      <span class="nm">Estructura crítica <span class="pill" id="st-contracts"><span class="d"></span>—</span></span>
      <button class="btn-run" data-action="contracts" data-st="st-contracts" data-log="log-checks" data-live="live-checks"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Correr todas</button>
@@ -1390,7 +1395,9 @@ function run(btn){
  var isAll=(action==='check-all');
  // Auto-expandir la tarjeta objetivo → nunca disparar un check cuyo resultado quede oculto.
  var liveCard=liveEl&&liveEl.closest?liveEl.closest('.card'):null;
- if(liveCard&&liveCard.classList.contains('collapsed'))toggleCard(liveCard,false);
+ // Expandir SOLO visualmente (sin persistir) → al recargar, la tarjeta vuelve a su
+ // estado colapsado por defecto. Persistir aquí haría que correr "fije" la tarjeta abierta.
+ if(liveCard&&liveCard.classList.contains('collapsed'))liveCard.classList.remove('collapsed');
  setBusy(true);
  if(isAll){setHero('run'); setPill(byId('st-checks'),'run');}
  else setPill(stEl,'run');
@@ -1541,6 +1548,9 @@ function renderHist(){
 function restorePills(){
  var last=lastByPill();
  for(var stId in last){ if(!last.hasOwnProperty(stId))continue;
+  // El check-all guarda su estado bajo stId 'hero', pero el hero NO es un pill:
+  // restaurarlo con setHero (setPill borraría el contenido de la sección).
+  if(stId==='hero'){ setHero(last[stId].state); continue; }
   var pill=byId(stId); if(!pill)continue;
   setPill(pill,last[stId].state);
   pill.title='Última corrida: '+new Date(last[stId].ts).toLocaleString('es-MX');
@@ -1715,7 +1725,7 @@ fetch('/config').then(function(r){return r.json();}).then(function(c){
  if(c.prodBlocked&&c.prodBlocked.length)PROD_BLOCKED=c.prodBlocked;
  applyEnv(byId('env').value); // estado inicial coherente (por si el navegador recordó la selección)
  if(c.envFields)buildConfig(c.envFields,c.envValues||{});
- if(c.healthCount){byId('healthSub').textContent=c.healthCount+' URLs · responden 200 y pintan contenido';}
+ if(c.healthCount){var zr=byId('z-responde'); if(zr)zr.title='¿Responden y renderizan? — '+c.healthCount+' URLs responden 200 y pintan contenido';}
  if(c.areas&&c.areas.length)buildAreas(c.areas);
  var n=byId('imapnote');
  if(c.imapMode==='B'){
