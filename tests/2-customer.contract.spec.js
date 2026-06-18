@@ -9,9 +9,21 @@
 //
 // Tag: @contract @auth
 
+const path = require('path');
+const fs = require('fs');
 const { test, expect, irA } = require('./_helpers');
 
+// Sesión autenticada B2C — igual que 2-money-path. SIN esto el spec corría ANÓNIMO
+// (el proyecto trae storageState:undefined) → /customer redirigía a login → los 3
+// tests hacían skip SIEMPRE, no solo con sesión expirada. Cargar la sesión aquí es
+// lo que hace que el área de cliente realmente se ejerza logueada. Si el archivo no
+// existe, skip limpio a nivel describe (no es regresión del sitio).
+const AUTH_FILE = path.resolve(__dirname, '../rotoplas-auth-b2c.json');
+const HAY_SESION = fs.existsSync(AUTH_FILE);
+if (HAY_SESION) test.use({ storageState: AUTH_FILE });
+
 test.describe('@contract @auth Área de cliente', () => {
+  test.skip(!HAY_SESION, 'Sin sesión B2C (rotoplas-auth-b2c.json). Corre `npm run auth:b2c`. No es regresión del sitio.');
   test.describe.configure({ mode: 'serial' });
 
   test('/customer — Página de datos del usuario renderiza', async ({ page }) => {

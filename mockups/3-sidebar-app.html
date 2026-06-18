@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel QA · App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eef2f4; --rail:#0b2434; --rail2:#0e2c40; --card:#ffffff; --line:#e2e8ec; --ink:#0c1b25; --mut:#5e7383; --dim:#94a6b2;
+  --aqua:#06b6c9; --aqua-d:#067a8a; --aquabg:#e2f7fa;
+  --ok:#10a86f; --okbg:#e3f6ed; --warn:#d99518; --warnbg:#fbf1dd; --err:#e0485c; --errbg:#fde7ea;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Public Sans',system-ui,sans-serif;display:flex;min-height:100vh}
+/* SIDEBAR */
+.rail{width:248px;flex:none;background:linear-gradient(180deg,var(--rail),var(--rail2));color:#cfe2ec;
+  display:flex;flex-direction:column;padding:20px 16px;position:sticky;top:0;height:100vh}
+.rb{display:flex;align-items:center;gap:11px;padding:4px 8px 18px}
+.rb .mk{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--aqua),#1f8fd6);display:grid;place-items:center;color:#03222b;font-family:'Bricolage Grotesque';font-weight:800}
+.rb b{font-family:'Bricolage Grotesque';font-weight:700;font-size:14px;color:#fff;letter-spacing:.01em}
+.rb span{display:block;font-size:10.5px;color:#6f93a6;letter-spacing:.12em;text-transform:uppercase;margin-top:1px}
+.envtog{margin:6px 4px 16px;background:rgba(224,72,92,.14);border:1px solid rgba(224,72,92,.45);border-radius:9px;padding:9px 11px;
+  display:flex;align-items:center;gap:9px;cursor:pointer}
+.envtog .led{width:8px;height:8px;border-radius:50%;background:var(--err);box-shadow:0 0 0 3px rgba(224,72,92,.2)}
+.envtog .tx{font-size:12px;font-weight:600;color:#ffb9c2}
+.envtog .tx small{display:block;font-size:10px;color:#7f96a3;font-weight:400}
+.navlbl{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#5d7d8f;padding:14px 10px 6px}
+.nav a{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:8px;color:#bcd2de;text-decoration:none;font-size:13.5px;font-weight:500;margin-bottom:1px}
+.nav a .ic{width:16px;height:16px;opacity:.8}
+.nav a.on{background:rgba(6,182,201,.16);color:#fff}
+.nav a.on .ic{opacity:1}
+.nav a:hover:not(.on){background:rgba(255,255,255,.05)}
+.nav a .pip{margin-left:auto;width:7px;height:7px;border-radius:50%}
+.pip.ok{background:var(--ok)}.pip.sk{background:var(--warn)}
+.rail .sp{flex:1}
+.runbig{width:100%;border:0;cursor:pointer;background:var(--aqua);color:#03222b;font-family:'Bricolage Grotesque';font-weight:700;
+  font-size:14px;padding:13px;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:9px}
+.runbig:hover{background:#08c8dd}
+.railfoot{font-size:10.5px;color:#5d7d8f;text-align:center;margin-top:12px}
+
+/* MAIN */
+.main{flex:1;min-width:0;padding:26px 34px 60px;overflow:auto}
+.crumb{display:flex;align-items:center;justify-content:space-between}
+.crumb .bc{font-size:12.5px;color:var(--mut)}
+.crumb .bc b{color:var(--ink)}
+.crumb .tlast{font-size:12px;color:var(--dim)}
+/* status banner */
+.status{margin-top:16px;background:var(--card);border:1px solid var(--line);border-left:5px solid var(--ok);border-radius:14px;
+  padding:22px 24px;display:flex;align-items:center;gap:26px;box-shadow:0 1px 0 rgba(12,27,37,.04)}
+.status .ico{width:52px;height:52px;border-radius:14px;background:var(--okbg);display:grid;place-items:center;color:var(--ok);font-size:26px;flex:none}
+.status h1{font-family:'Bricolage Grotesque';font-weight:800;font-size:27px;margin:0;letter-spacing:-.01em}
+.status p{margin:3px 0 0;color:var(--mut);font-size:13.5px}
+.status .nums{margin-left:auto;display:flex;gap:24px;text-align:center}
+.status .nums .n{font-family:'Bricolage Grotesque';font-weight:800;font-size:26px;line-height:1}
+.nums .n.ok{color:var(--ok)}.nums .n.sk{color:var(--warn)}.nums .n.er{color:var(--err)}
+.status .nums .l{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-top:5px}
+
+.h2{font-family:'Bricolage Grotesque';font-weight:700;font-size:15px;margin:30px 2px 12px;display:flex;align-items:center;gap:10px}
+.h2 .c{font-size:11px;font-weight:500;color:var(--dim);font-family:'Public Sans'}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:1100px){.grid{grid-template-columns:repeat(2,1fr)}}
+.cell{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 16px;cursor:pointer;transition:.14s;display:flex;align-items:center;gap:13px}
+.cell:hover{border-color:var(--aqua);box-shadow:0 4px 16px rgba(6,182,201,.1);transform:translateY(-1px)}
+.cell .badge{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:13px;flex:none}
+.badge.ok{background:var(--okbg);color:var(--ok)} .badge.sk{background:var(--warnbg);color:var(--warn)}
+.cell .nm{font-weight:600;font-size:14px}
+.cell .ds{font-size:11.5px;color:var(--mut);margin-top:2px}
+.cell .lk{margin-left:auto;color:var(--dim);font-size:12px}
+
+.ops{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:1100px){.ops{grid-template-columns:1fr}}
+.opc{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px}
+.opc h4{font-family:'Bricolage Grotesque';font-weight:700;font-size:15px;margin:0 0 6px;display:flex;align-items:center;gap:8px}
+.opc p{margin:0;color:var(--mut);font-size:12.5px;line-height:1.5}
+.opc .tag{display:inline-block;margin-top:13px;font-size:10.5px;font-weight:600;letter-spacing:.04em;color:var(--dim);background:var(--bg);border-radius:6px;padding:5px 10px}
+.fade{opacity:0;transform:translateY(10px);animation:rise .5s forwards}
+@keyframes rise{to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+  <aside class="rail">
+    <div class="rb"><div class="mk">R</div><div><b>Panel QA</b><span>Rotoplas B2C</span></div></div>
+    <div class="envtog"><span class="led"></span><div class="tx">Producción<small>solo monitoreo de lectura</small></div></div>
+    <div class="navlbl">Monitoreo</div>
+    <nav class="nav">
+      <a class="on" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>Resumen<span class="pip ok"></span></a>
+      <a href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Estructura crítica<span class="pip ok"></span></a>
+      <a href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M4 9h16"/></svg>Correos<span class="pip sk"></span></a>
+      <a href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h9l5 5v15H6z"/><path d="M9 13h6M9 17h6"/></svg>Crear orden</a>
+      <a href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>Historial</a>
+    </nav>
+    <div class="navlbl">Ajustes</div>
+    <nav class="nav">
+      <a href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 0 0-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.5 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.5 2.4-1a7 7 0 0 0 1.7 1l.3 2.5h4l.3-2.5a7 7 0 0 0 1.7-1l2.4 1 2-3.5-2-1.5a7 7 0 0 0 .1-1z"/></svg>Credenciales</a>
+    </nav>
+    <div class="sp"></div>
+    <button class="runbig">▶ Revisar sitio</button>
+    <div class="railfoot">últ. corrida 14:38 · 1m 28s</div>
+  </aside>
+
+  <main class="main">
+    <div class="crumb fade"><div class="bc"><b>Resumen</b> · post-deploy monitor</div><div class="tlast">rotoplas.com.mx · 16 jun 2026 14:38</div></div>
+
+    <div class="status fade" style="animation-delay:.05s">
+      <div class="ico">✓</div>
+      <div><h1>Todo en pie</h1><p>La estructura crítica respondió correctamente. Ningún elemento load-bearing se rompió en producción.</p></div>
+      <div class="nums">
+        <div><div class="n ok">68</div><div class="l">en pie</div></div>
+        <div><div class="n sk">11</div><div class="l">omitidos</div></div>
+        <div><div class="n er">0</div><div class="l">rotos</div></div>
+      </div>
+    </div>
+
+    <div class="h2 fade" style="animation-delay:.1s">Estructura crítica <span class="c">· 9 zonas</span></div>
+    <div class="grid">
+      <div class="cell fade" style="animation-delay:.12s"><div class="badge ok">✓</div><div><div class="nm">Responden y renderizan</div><div class="ds">16 URLs · 200 + contenido</div></div></div>
+      <div class="cell fade" style="animation-delay:.14s"><div class="badge ok">✓</div><div><div class="nm">Formularios</div><div class="ds">login · registro · recuperar</div></div></div>
+      <div class="cell fade" style="animation-delay:.16s"><div class="badge ok">✓</div><div><div class="nm">Cascarón global</div><div class="ds">header · nav · footer</div></div></div>
+      <div class="cell fade" style="animation-delay:.18s"><div class="badge ok">✓</div><div><div class="nm">Home</div><div class="ds">hero · soluciones</div></div></div>
+      <div class="cell fade" style="animation-delay:.2s"><div class="badge ok">✓</div><div><div class="nm">Catálogo / PDP</div><div class="ds">precio · stepper · CTA</div></div></div>
+      <div class="cell fade" style="animation-delay:.22s"><div class="badge ok">✓</div><div><div class="nm">Servicios</div><div class="ds">lavado · wizard</div></div></div>
+      <div class="cell fade" style="animation-delay:.24s"><div class="badge sk">○</div><div><div class="nm">Ruta del dinero</div><div class="ds">requiere sesión</div></div><span class="lk">🔒</span></div>
+      <div class="cell fade" style="animation-delay:.26s"><div class="badge sk">○</div><div><div class="nm">Mi cuenta</div><div class="ds">requiere sesión</div></div><span class="lk">🔒</span></div>
+      <div class="cell fade" style="animation-delay:.28s"><div class="badge ok">✓</div><div><div class="nm">Institucional</div><div class="ds">contacto · faq · legales</div></div></div>
+    </div>
+
+    <div class="h2 fade" style="animation-delay:.3s">Operaciones <span class="c">· solo QA</span></div>
+    <div class="ops">
+      <div class="opc fade" style="animation-delay:.32s"><h4>📧 Correos transaccionales</h4><p>Crea una orden, avanza estados y verifica que lleguen los correos de ventasecom.</p><span class="tag">deshabilitado en prod</span></div>
+      <div class="opc fade" style="animation-delay:.34s"><h4>🧾 Crear orden</h4><p>Recorre el sitio como usuario real: carrito → checkout → pago sandbox.</p><span class="tag">deshabilitado en prod</span></div>
+      <div class="opc fade" style="animation-delay:.36s"><h4>🕓 Historial</h4><p>Las últimas corridas en este navegador, para ver si algo de ayer hoy se rompió.</p><span class="tag">3 corridas hoy</span></div>
+    </div>
+  </main>
+</body>
+</html>

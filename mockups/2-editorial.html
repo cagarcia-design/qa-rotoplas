@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel QA · Reporte</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,900&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f6f1e7; --paper2:#fbf8f1; --ink:#1c1813; --soft:#6a6155; --line:#ddd3c2;
+  --ox:#9c3b2e; --teal:#2f6f63; --gold:#b6892f;
+  --ok:#2f6f63; --err:#9c3b2e; --warn:#b6892f;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:'Newsreader',Georgia,serif;
+  background-image:radial-gradient(circle at 1px 1px, rgba(0,0,0,.025) 1px, transparent 0);background-size:22px 22px;}
+.sheet{max-width:1080px;margin:0 auto;padding:34px 40px 70px}
+/* masthead */
+.mast{display:flex;align-items:flex-end;justify-content:space-between;border-bottom:3px double var(--ink);padding-bottom:14px}
+.mast .l .kick{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--soft)}
+.mast h1{font-family:'Fraunces';font-weight:900;font-size:40px;margin:4px 0 0;letter-spacing:-.01em;line-height:1}
+.mast .r{text-align:right;font-family:'IBM Plex Mono';font-size:11px;color:var(--soft);line-height:1.7}
+.mast .r .env{display:inline-block;margin-top:4px;border:1.5px solid var(--err);color:var(--err);border-radius:2px;padding:3px 9px;letter-spacing:.16em;text-transform:uppercase;font-weight:500}
+.subline{display:flex;gap:18px;font-family:'IBM Plex Mono';font-size:11px;color:var(--soft);letter-spacing:.06em;padding:8px 0 0;border-bottom:1px solid var(--line)}
+.subline span::before{content:"▪ ";color:var(--gold)}
+
+/* lede / verdict */
+.lede{display:grid;grid-template-columns:1.5fr .8fr;gap:40px;margin-top:30px}
+.lede .drop{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--teal)}
+.lede h2{font-family:'Fraunces';font-weight:600;font-size:62px;line-height:.98;margin:8px 0 14px;letter-spacing:-.02em}
+.lede p{font-size:19px;line-height:1.5;color:#2c2820;max-width:40ch;margin:0}
+.lede p .first{font-family:'Fraunces';font-weight:600}
+.cta{margin-top:22px;display:inline-flex;align-items:center;gap:10px;background:var(--ink);color:var(--paper2);
+  font-family:'IBM Plex Mono';font-size:13px;letter-spacing:.1em;text-transform:uppercase;border:0;cursor:pointer;
+  padding:14px 24px;border-radius:2px}
+.cta:hover{background:var(--ox)}
+.scorecard{border:1px solid var(--line);background:var(--paper2);border-radius:4px;padding:22px;align-self:start;box-shadow:6px 6px 0 rgba(28,24,19,.06)}
+.scorecard .h{font-family:'IBM Plex Mono';font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--soft);border-bottom:1px solid var(--line);padding-bottom:10px}
+.score{display:flex;align-items:baseline;justify-content:space-between;padding:13px 0;border-bottom:1px dotted var(--line)}
+.score:last-child{border:0;padding-bottom:0}
+.score .num{font-family:'Fraunces';font-weight:900;font-size:34px;line-height:1}
+.score .num.ok{color:var(--ok)} .score .num.sk{color:var(--warn)} .score .num.er{color:var(--err)}
+.score .lab{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--soft)}
+
+/* columns of sections */
+.divider{display:flex;align-items:center;gap:14px;margin:42px 0 18px}
+.divider h3{font-family:'Fraunces';font-weight:600;font-style:italic;font-size:24px;margin:0;white-space:nowrap}
+.divider .ln{flex:1;height:1px;background:var(--ink);opacity:.35}
+.divider .ct{font-family:'IBM Plex Mono';font-size:11px;color:var(--soft);letter-spacing:.1em}
+.cols{column-count:3;column-gap:26px}
+@media(max-width:820px){.cols{column-count:1}.lede{grid-template-columns:1fr}}
+.entry{break-inside:avoid;border-top:2px solid var(--ink);padding:10px 0 16px;margin-bottom:18px;display:flex;flex-direction:column;cursor:pointer}
+.entry .row{display:flex;align-items:center;justify-content:space-between}
+.entry .nm{font-family:'Fraunces';font-weight:600;font-size:18px}
+.entry .badge{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:2px 7px;border-radius:2px}
+.badge.ok{background:#e4ece9;color:var(--ok)} .badge.sk{background:#f3ebd6;color:var(--warn)}
+.entry .ds{font-size:14px;color:var(--soft);margin-top:4px;line-height:1.4}
+.entry.lock .nm::after{content:" ✦";color:var(--gold)}
+
+.ops{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--paper2)}
+@media(max-width:820px){.ops{grid-template-columns:1fr}}
+.op{padding:20px 22px;border-right:1px solid var(--line)}
+.op:last-child{border-right:0}
+.op .t{font-family:'Fraunces';font-weight:600;font-size:19px}
+.op .x{font-size:14.5px;color:var(--soft);line-height:1.5;margin:6px 0 0}
+.op .note{display:block;margin-top:12px;font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}
+.foot{margin-top:40px;text-align:center;font-family:'IBM Plex Mono';font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--soft)}
+.fade{opacity:0;transform:translateY(12px);animation:rise .6s forwards}
+@keyframes rise{to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="mast fade">
+    <div class="l">
+      <div class="kick">Boletín de calidad · post-liberación</div>
+      <h1>El Centinela B2C</h1>
+    </div>
+    <div class="r">Edición 14:38 · 16 jun 2026<br>Rotoplas · qarotoplasmx<div class="env">Producción</div></div>
+  </div>
+  <div class="subline fade" style="animation-delay:.05s">
+    <span>rotoplas.com.mx</span><span>duración 1m 28s</span><span>solo lectura</span><span>sin regresiones</span>
+  </div>
+
+  <div class="lede">
+    <div class="fade" style="animation-delay:.1s">
+      <div class="drop">El veredicto</div>
+      <h2>Todo en pie.</h2>
+      <p><span class="first">La estructura crítica del sitio</span> respondió correctamente tras la liberación. Ningún elemento load-bearing —precio, botón de compra, formularios, cascarón— se rompió en producción.</p>
+      <button class="cta">▶ Revisar sitio de nuevo</button>
+    </div>
+    <div class="scorecard fade" style="animation-delay:.15s">
+      <div class="h">Marcador</div>
+      <div class="score"><div><div class="num ok">68</div></div><span class="lab">en pie</span></div>
+      <div class="score"><div><div class="num sk">11</div></div><span class="lab">omitidos · @auth</span></div>
+      <div class="score"><div><div class="num er">0</div></div><span class="lab">rotos</span></div>
+    </div>
+  </div>
+
+  <div class="divider fade" style="animation-delay:.2s"><h3>Estructura crítica</h3><div class="ln"></div><span class="ct">nueve zonas</span></div>
+  <div class="cols">
+    <div class="entry fade" style="animation-delay:.22s"><div class="row"><span class="nm">Responden y renderizan</span><span class="badge ok">ok</span></div><div class="ds">16 URLs devuelven 200 y pintan contenido real, no solo el cascarón.</div></div>
+    <div class="entry fade" style="animation-delay:.24s"><div class="row"><span class="nm">Formularios</span><span class="badge ok">ok</span></div><div class="ds">Login, registro, recuperar y seguimiento con su validación.</div></div>
+    <div class="entry fade" style="animation-delay:.26s"><div class="row"><span class="nm">Cascarón global</span><span class="badge ok">ok</span></div><div class="ds">Header, navegación y footer con sus links legales.</div></div>
+    <div class="entry fade" style="animation-delay:.28s"><div class="row"><span class="nm">Home</span><span class="badge ok">ok</span></div><div class="ds">Hero y bloques de soluciones renderizan.</div></div>
+    <div class="entry fade" style="animation-delay:.3s"><div class="row"><span class="nm">Catálogo / PDP</span><span class="badge ok">ok</span></div><div class="ds">Título, precio, stepper y botón "Agregar a carrito".</div></div>
+    <div class="entry fade" style="animation-delay:.32s"><div class="row"><span class="nm">Servicios</span><span class="badge ok">ok</span></div><div class="ds">Página de servicios y wizard de cotización de lavado.</div></div>
+    <div class="entry lock fade" style="animation-delay:.34s"><div class="row"><span class="nm">Ruta del dinero</span><span class="badge sk">omitido</span></div><div class="ds">PDP → carrito → checkout. Requiere sesión iniciada.</div></div>
+    <div class="entry lock fade" style="animation-delay:.36s"><div class="row"><span class="nm">Mi cuenta</span><span class="badge sk">omitido</span></div><div class="ds">/customer y subpáginas. Requiere sesión iniciada.</div></div>
+    <div class="entry fade" style="animation-delay:.38s"><div class="row"><span class="nm">Institucional</span><span class="badge ok">ok</span></div><div class="ds">Contacto, FAQ, distribuidores y páginas legales.</div></div>
+  </div>
+
+  <div class="divider fade" style="animation-delay:.4s"><h3>Operaciones</h3><div class="ln"></div><span class="ct">solo en QA</span></div>
+  <div class="ops fade" style="animation-delay:.42s">
+    <div class="op"><div class="t">Correos transaccionales</div><div class="x">Crea una orden, avanza sus estados y verifica que lleguen los correos de ventasecom.</div><span class="note">deshabilitado en producción</span></div>
+    <div class="op"><div class="t">Crear orden</div><div class="x">Recorre el sitio como un usuario real: carrito, checkout y pago sandbox.</div><span class="note">deshabilitado en producción</span></div>
+    <div class="op"><div class="t">Historial</div><div class="x">Las últimas corridas en este navegador, para ver si algo de ayer hoy se rompió.</div><span class="note">tres corridas hoy</span></div>
+  </div>
+
+  <div class="foot fade" style="animation-delay:.46s">— fin del boletín · Panel QA Rotoplas B2C —</div>
+</div>
+</body>
+</html>

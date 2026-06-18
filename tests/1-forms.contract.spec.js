@@ -33,6 +33,39 @@ test.describe('@forms @contract Login — /login/', () => {
     ).toBeVisible({ timeout: 5000 });
   });
 
+  // N1 (comportamiento) — el formato de email se valida en cliente ANTES de pegarle
+  // al backend (inventario I.14.a: vacío y malformado dan el MISMO error). No hay
+  // submit al servidor ni correo → prod-safe. Profundiza de "el form renderiza" a
+  // "el form valida".
+  test('Email mal formado dispara la validación de formato (no envía)', async ({ page }) => {
+    await irA(page, '/login/');
+    await page.locator('input[name="email"]').first().fill('correo-sin-arroba');
+    await page.locator('input[type="password"]').first().fill('cualquiercosa123');
+    await page.getByRole('button', { name: /iniciar sesión/i }).click();
+    await expect(
+      page.getByText(/correo electrónico válida/i).first()
+    ).toBeVisible({ timeout: 5000 });
+  });
+
+  // N1 (comportamiento de SEGURIDAD) — invariante load-bearing: credenciales que NO
+  // existen NUNCA deben autenticar. Hace el submit REAL al endpoint de auth (con un
+  // email-cebo que no es cuenta de nadie → no bloquea a un usuario real, no muta, no
+  // dispara correo) y verifica el efecto: sigue anónimo. Esto distingue "el botón
+  // existe" de "el login realmente rechaza". Prod-safe.
+  test('Credenciales inválidas NO autentican (queda anónimo)', async ({ page }) => {
+    await irA(page, '/login/');
+    await page.locator('input[name="email"]').first().fill('noexiste.qa.smoke@example.com');
+    await page.locator('input[type="password"]').first().fill('PasswordIncorrecto123');
+    await page.getByRole('button', { name: /iniciar sesión/i }).click();
+    await page.waitForTimeout(4000); // settle de la respuesta del backend de auth
+
+    // Invariante de seguridad: el header sigue ofreciendo iniciar sesión → NO autenticó.
+    // (Ancla estable reusada de money-path / setup-auth, no copy del mensaje de error.)
+    await expect(page.getByText('Inicia sesión o regístrate').first()).toBeVisible();
+    // Y no redirigió fuera de /login (un login exitoso saldría a home o /customer).
+    expect(page.url()).toContain('/login');
+  });
+
 });
 
 test.describe('@forms @contract Signup — /signup/', () => {
@@ -70,6 +103,19 @@ test.describe('@forms @contract Forgot password — /forgot-password/', () => {
 
   test('Error con email vacío', async ({ page }) => {
     await irA(page, '/forgot-password/');
+    await page.getByRole('button', { name: /enviar correo/i }).click();
+    await expect(
+      page.getByText(/correo electrónico válida/i).first()
+    ).toBeVisible({ timeout: 5000 });
+  });
+
+  // N1 — email mal formado dispara la misma validación de formato (cliente, sin
+  // envío real). Prod-safe. El camino feliz (email válido → correo de reset llega
+  // al inbox) vive en el spec N2 `4-forms-email.smoke.spec.js` porque requiere
+  // acceso al inbox (IMAP) y una cuenta registrada.
+  test('Email mal formado dispara la validación de formato', async ({ page }) => {
+    await irA(page, '/forgot-password/');
+    await page.locator('input[name="email"]').first().fill('correo-sin-arroba');
     await page.getByRole('button', { name: /enviar correo/i }).click();
     await expect(
       page.getByText(/correo electrónico válida/i).first()

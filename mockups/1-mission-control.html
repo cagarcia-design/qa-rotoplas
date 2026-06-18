@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel QA · Mission Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070b12; --panel:#0d1420; --panel2:#111a28; --line:#1c2a3d;
+  --ink:#e6f0fb; --mut:#6b8199; --dim:#3f546b;
+  --ok:#34e0a1; --okbg:#0d2a22; --err:#ff5c6c; --errbg:#2b1118; --warn:#ffc24b; --warnbg:#2b2210;
+  --accent:#39b6ff; --grid:#0f1826;
+}
+*{box-sizing:border-box}
+body{margin:0;background:
+   radial-gradient(1200px 600px at 80% -10%, #0e1f33 0%, transparent 60%),
+   repeating-linear-gradient(0deg,transparent 0 38px,#0a1019 38px 39px),
+   var(--bg);
+  color:var(--ink);font-family:'JetBrains Mono',monospace;min-height:100vh}
+.wrap{max-width:1240px;margin:0 auto;padding:22px 26px 60px}
+/* top bar */
+.bar{display:flex;align-items:center;gap:16px;border:1px solid var(--line);background:linear-gradient(180deg,#0e1726,#0b1220);border-radius:14px;padding:14px 18px}
+.logo{width:34px;height:34px;border-radius:9px;background:radial-gradient(circle at 30% 30%,#46c8ff,#1f6bd6);display:grid;place-items:center;font-weight:700;color:#04101e;font-family:'Chakra Petch'}
+.brand b{font-family:'Chakra Petch';font-weight:700;font-size:15px;letter-spacing:.04em}
+.brand span{display:block;color:var(--mut);font-size:11px;letter-spacing:.18em;text-transform:uppercase;margin-top:2px}
+.bar .sp{flex:1}
+.env{display:flex;align-items:center;gap:8px;border:1px solid var(--err);background:var(--errbg);color:var(--err);
+  border-radius:999px;padding:7px 14px;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+.env .led{width:8px;height:8px;border-radius:50%;background:var(--err);box-shadow:0 0 0 4px rgba(255,92,108,.18);animation:pulse 1.3s infinite}
+.clock{color:var(--mut);font-size:12px;letter-spacing:.05em}
+
+/* hero verdict */
+.hero{display:grid;grid-template-columns:1.3fr .9fr;gap:18px;margin-top:18px}
+.verdict{border:1px solid var(--line);border-radius:16px;padding:26px 28px;position:relative;overflow:hidden;
+  background:linear-gradient(180deg,#0f2a22,#0b1a17);}
+.verdict::after{content:"";position:absolute;inset:0;background:radial-gradient(400px 200px at 90% 10%,rgba(52,224,161,.18),transparent)}
+.verdict .tag{font-family:'Chakra Petch';font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--ok)}
+.verdict h1{font-family:'Chakra Petch';font-weight:700;font-size:42px;margin:8px 0 2px;letter-spacing:.01em}
+.verdict .scan{color:var(--mut);font-size:12.5px}
+.counts{display:flex;gap:26px;margin-top:22px}
+.counts div{font-family:'Chakra Petch'}
+.counts .n{font-size:30px;font-weight:700;line-height:1}
+.counts .n.ok{color:var(--ok)} .counts .n.sk{color:var(--warn)} .counts .n.er{color:var(--err)}
+.counts .l{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--mut);margin-top:6px}
+.run{position:relative;z-index:2;margin-top:24px;display:inline-flex;align-items:center;gap:10px;border:0;cursor:pointer;
+  background:var(--ok);color:#04130d;font-family:'Chakra Petch';font-weight:700;font-size:14px;letter-spacing:.06em;
+  padding:13px 22px;border-radius:10px;text-transform:uppercase}
+.run:hover{filter:brightness(1.08)}
+.side{display:flex;flex-direction:column;gap:14px}
+.gauge{border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:18px 20px;flex:1}
+.gauge h3{margin:0 0 14px;font-family:'Chakra Petch';font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--mut)}
+.metric{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px dashed #16202e;font-size:12.5px}
+.metric:last-child{border:0}
+.metric .v{color:var(--accent);font-weight:700}
+.bars{display:flex;gap:3px;margin-top:6px}
+.bars i{flex:1;height:34px;border-radius:2px;background:#16243a}
+.bars i.on{background:var(--ok)} .bars i.warn{background:var(--warn)} .bars i.er{background:var(--err)}
+
+/* section title */
+.sect{display:flex;align-items:center;gap:12px;margin:30px 2px 12px}
+.sect h2{font-family:'Chakra Petch';font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink);margin:0}
+.sect .rule{flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+.sect .meta{color:var(--dim);font-size:11px;letter-spacing:.1em}
+
+/* tile grid */
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
+@media(max-width:900px){.tiles{grid-template-columns:repeat(2,1fr)}}
+.tile{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:14px;position:relative;cursor:pointer;transition:.15s}
+.tile:hover{border-color:#2c4b6e;transform:translateY(-2px)}
+.tile .top{display:flex;align-items:center;justify-content:space-between}
+.dot{width:9px;height:9px;border-radius:50%}
+.dot.ok{background:var(--ok);box-shadow:0 0 10px var(--ok)} .dot.sk{background:var(--warn)} .dot.idle{background:#2a3a4f}
+.tile .st{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+.tile .nm{font-family:'Chakra Petch';font-weight:600;font-size:14px;margin-top:14px}
+.tile .sub{font-size:10.5px;color:var(--dim);margin-top:3px}
+.tile.locked .nm::after{content:" 🔒";font-size:11px}
+
+/* ops row */
+.ops{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;margin-top:11px}
+@media(max-width:900px){.ops{grid-template-columns:1fr}}
+.op{border:1px solid var(--line);background:linear-gradient(180deg,var(--panel2),var(--panel));border-radius:12px;padding:16px}
+.op h4{margin:0 0 6px;font-family:'Chakra Petch';font-size:13px;letter-spacing:.05em}
+.op p{margin:0;color:var(--mut);font-size:11.5px;line-height:1.5}
+.op .pill{display:inline-block;margin-top:12px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);border:1px solid var(--line);border-radius:6px;padding:4px 9px}
+@keyframes pulse{50%{opacity:.4}}
+.fade{opacity:0;transform:translateY(10px);animation:rise .5s forwards}
+@keyframes rise{to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar fade">
+    <div class="logo">R</div>
+    <div class="brand"><b>PANEL QA · ROTOPLAS B2C</b><span>post-deploy monitor</span></div>
+    <div class="sp"></div>
+    <div class="clock">últ. corrida 14:38:02 · 1m 28s</div>
+    <div class="env"><span class="led"></span>Producción</div>
+  </div>
+
+  <div class="hero">
+    <div class="verdict fade" style="animation-delay:.05s">
+      <div class="tag">◢ veredicto</div>
+      <h1>Todo en pie</h1>
+      <div class="scan">rotoplas.com.mx · estructura crítica intacta · sin regresiones</div>
+      <div class="counts">
+        <div><div class="n ok">68</div><div class="l">en pie</div></div>
+        <div><div class="n sk">11</div><div class="l">omitidos</div></div>
+        <div><div class="n er">0</div><div class="l">rotos</div></div>
+      </div>
+      <button class="run">▶ Revisar sitio</button>
+    </div>
+    <div class="side">
+      <div class="gauge fade" style="animation-delay:.1s">
+        <h3>Señal por capa</h3>
+        <div class="metric"><span>Capa 0 · Responden</span><span class="v">16/16</span></div>
+        <div class="metric"><span>Capa 1 · Contracts</span><span class="v">42/42</span></div>
+        <div class="metric"><span>Capa 1 · @auth</span><span class="v" style="color:var(--warn)">skip</span></div>
+        <div class="bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="warn"></i><i class="warn"></i><i class="on"></i><i class="on"></i></div>
+      </div>
+      <div class="gauge fade" style="animation-delay:.15s">
+        <h3>Ambiente</h3>
+        <div class="metric"><span>Target</span><span class="v">rotoplas.com.mx</span></div>
+        <div class="metric"><span>Modo</span><span class="v">solo lectura</span></div>
+        <div class="metric"><span>Correos</span><span class="v" style="color:var(--dim)">deshabilitado</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sect fade" style="animation-delay:.2s"><h2>Estructura crítica</h2><div class="rule"></div><span class="meta">9 zonas</span></div>
+  <div class="tiles">
+    <div class="tile fade" style="animation-delay:.22s"><div class="top"><span class="dot ok"></span><span class="st">ok</span></div><div class="nm">Responden y renderizan</div><div class="sub">16 URLs · 200 + contenido</div></div>
+    <div class="tile fade" style="animation-delay:.24s"><div class="top"><span class="dot ok"></span><span class="st">ok</span></div><div class="nm">Formularios</div><div class="sub">login · registro · recuperar</div></div>
+    <div class="tile fade" style="animation-delay:.26s"><div class="top"><span class="dot ok"></span><span class="st">ok</span></div><div class="nm">Cascarón global</div><div class="sub">header · nav · footer</div></div>
+    <div class="tile fade" style="animation-delay:.28s"><div class="top"><span class="dot ok"></span><span class="st">ok</span></div><div class="nm">Home</div><div class="sub">hero · soluciones</div></div>
+    <div class="tile fade" style="animation-delay:.3s"><div class="top"><span class="dot ok"></span><span class="st">ok</span></div><div class="nm">Catálogo / PDP</div><div class="sub">precio · stepper · CTA</div></div>
+    <div class="tile fade" style="animation-delay:.32s"><div class="top"><span class="dot ok"></span><span class="st">ok</span></div><div class="nm">Servicios</div><div class="sub">lavado · wizard</div></div>
+    <div class="tile locked fade" style="animation-delay:.34s"><div class="top"><span class="dot sk"></span><span class="st">omitido</span></div><div class="nm">Ruta del dinero</div><div class="sub">requiere sesión</div></div>
+    <div class="tile locked fade" style="animation-delay:.36s"><div class="top"><span class="dot sk"></span><span class="st">omitido</span></div><div class="nm">Mi cuenta</div><div class="sub">requiere sesión</div></div>
+    <div class="tile fade" style="animation-delay:.38s"><div class="top"><span class="dot ok"></span><span class="st">ok</span></div><div class="nm">Institucional</div><div class="sub">contacto · faq · legales</div></div>
+  </div>
+
+  <div class="sect fade" style="animation-delay:.4s"><h2>Operaciones</h2><div class="rule"></div><span class="meta">solo QA</span></div>
+  <div class="ops">
+    <div class="op fade" style="animation-delay:.42s"><h4>Correos transaccionales</h4><p>Crea orden, avanza estados y verifica que lleguen los correos de ventasecom.</p><span class="pill">deshabilitado en prod</span></div>
+    <div class="op fade" style="animation-delay:.44s"><h4>Crear orden</h4><p>Recorre el sitio como usuario real: carrito → checkout → pago sandbox.</p><span class="pill">deshabilitado en prod</span></div>
+    <div class="op fade" style="animation-delay:.46s"><h4>Historial</h4><p>Últimas corridas en este navegador. La de ayer estaba en pie; hoy también.</p><span class="pill">3 corridas hoy</span></div>
+  </div>
+</div>
+</body>
+</html>
