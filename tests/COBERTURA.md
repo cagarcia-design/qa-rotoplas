@@ -66,7 +66,7 @@ No cargan celdas del mapa — viven en su propia línea. Si uno **pasa** (se arr
 Estas celdas están **diseñadas pero sin prueba**. Orden de `../diseno-dashboard.md` §8–9.
 
 1. **Flujo Catálogo/PDP a fondo (F7)** — add-to-cart real que persiste · galería de *este* producto · filtros/orden · acordeones · disponibilidad por CP.
-2. **Móvil 375px (toda columna)** — `5-mobile.contract.spec.js` aparcado (`test.skip`): arreglar el check de overflow real (no `scrollWidth`), anclar la hamburguesa al `<svg>` interno, viewport 375 explícito.
+2. **Móvil 375px** — `5-mobile.contract.spec.js`: **PDP y catálogo a 375px ACTIVOS y verdes** (overflow REAL por intento-de-scroll, viewport 375 explícito). **Home (hamburguesa/menú) parqueado** (`test.skip` por test): el menú es handler Qwik `on:click` sin `<input>` y `.mobile-menu` aparece duplicado (BUG-005) → abrir+asertar necesita inspección de DOM en vivo. El panel mantiene la columna Móvil como ⏳ (no corre móvil por área).
 3. **Calidad transversal (F3)** — specs nuevos: consola JS · links a destino · 404 · Lighthouse.
 4. **Flujos de área restantes** — buscador (Header) · selector de soluciones (Home) · compra de servicio (Servicios) · contacto submit / faq acordeón / distribuidores encadenado (Institucional).
 5. **Móvil de Compra/Mi cuenta** — los mutantes a 375px.

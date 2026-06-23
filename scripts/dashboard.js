@@ -132,6 +132,8 @@ const ACTIONS = {
   'purchase':       { kind: 'pw', grep: ['--grep', '@purchase'], usesBrowser: true, label: 'Compra E2E → nº de orden (QA)' },
   'login-check':    { kind: 'pw', grep: ['--grep', '@login'],    usesBrowser: true, label: 'Login → sesión (QA)' },
   'forms-email':    { kind: 'pw', grep: ['--grep', '@email'],    usesBrowser: true, label: 'Forms + correo (forgot reset)' },
+  // Calidad transversal (site-wide): excepciones JS no capturadas + 404/catchall.
+  'xcut':           { kind: 'pw', grep: ['--grep', '@xcut'],     usesBrowser: true, label: 'Errores y enlaces (transversal)' },
   // Lectura global (atajo): todo lo no-mutante. La acción maestra del panel
   // secuencia por celda; esta queda como respaldo de "una sola corrida".
   'check-all':      { kind: 'pw', grep: ['--grep-invert', '@capa2|@smoke'], usesBrowser: true, label: 'Revisar sitio (lectura)' },
@@ -839,9 +841,12 @@ const PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8">
 
  <section class="block collapsed" id="xBlock">
   <div class="block-h" data-block="xBlock"><span class="cic"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg></span><h2>Calidad transversal</h2><span class="hint">site-wide — no cabe como columna del mapa</span><span class="block-chev"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span></div>
-  <div class="xrow"><span class="pill is-pend"><span class="d"></span>⏳ pendiente</span><span class="xnm"><b>Errores y enlaces</b><small>consola JS nueva · links a destino correcto (BUG-003) · 404/catchall (BUG-518)</small></span></div>
-  <div class="xrow"><span class="pill is-pend"><span class="d"></span>⏳ pendiente</span><span class="xnm"><b>Performance</b><small>Lighthouse / Core Web Vitals — Home, PDP</small></span></div>
-  <div class="xrow"><span class="pill"><span class="d"></span>baseline</span><span class="xnm"><b>PCI</b><small>2-pci-baseline — guard de BUG-119 (PAN en detalle de pedido). Se vigila arriba.</small></span></div>
+  <div class="xrow"><span class="pill" id="st-xcut"><span class="d"></span>—</span><span class="xnm"><b>Errores y enlaces</b><small>excepciones JS no capturadas (Home·Categoría·Contacto) · 404/catchall (BUG-518)</small></span><button class="btn-sec" data-action="xcut" data-st="st-xcut" data-live="live-xcut" data-log="log-xcut" data-flow="checks"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>correr</button></div>
+  <div class="xrow"><span class="pill is-pend"><span class="d"></span>⏳</span><span class="xnm"><b>Performance</b><small>Lighthouse / Core Web Vitals — Home, PDP · roadmap (ver tests/COBERTURA.md)</small></span></div>
+  <div class="xrow"><span class="pill"><span class="d"></span>baseline</span><span class="xnm"><b>PCI</b><small>2-pci-baseline — guard de BUG-119 (PAN en detalle de pedido). Se vigila en Mi cuenta.</small></span></div>
+  <div class="live" id="live-xcut" data-flow="checks"></div>
+  <button class="detalle" data-target="log-xcut">ver detalle técnico <span class="ar">▾</span></button>
+  <pre class="log" id="log-xcut"></pre>
  </section>
 
  <section class="block collapsed" id="dataBlock">

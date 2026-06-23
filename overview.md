@@ -174,6 +174,21 @@ Estos hallazgos surgieron al construir los contracts y son **load-bearing para a
 - CI listo-apagado: `.github/workflows/check-b2c.yml` (manual `workflow_dispatch`; disparadores auto comentados; ruta `@auth` requiere secretos `B2C_USER`/`B2C_PASS`).
 - Doc operativa + pitch a stakeholders: `tests/contracts/b2c/README.md`.
 
+### Sesión 27 (2026-06-23) — Rediseño del panel POR ÁREA + evidencias organizadas + calidad transversal
+
+Implementación del **rediseño completo del dashboard** (`diseno-dashboard.md`, antes solo aprobado). El panel pasó de tarjetas por tipo a un **mapa por ÁREA del sitio**. Detalle de fases y verificación en `diseno-dashboard.md` §15. **0 bugs nuevos del sitio.**
+
+**Entregado y verificado en vivo:**
+- **F0:** campo `area` por `HEALTH_URL` + `healthUrls()` (slicing por `DASH_AREA`) + URL de Servicios en health; `tests/COBERTURA.md` recreado (matriz 7×4 + convención de evidencias). Health/content usan `healthUrls()`.
+- **F1+F2:** reescritura del PAGE — barra superior (ambiente · ver navegador **headless-default** · ⚙), **tira de prerequisitos** (semáforo sitio/B2C/IMAP/CT), acción maestra "Revisar sitio" (secuenciador de lectura por celda) + livebar sticky, **resumen salud + cobertura** (15/27 celdas), **mapa 7×4** (Header/Footer, Home, Catálogo/PDP, Servicios, Institucional, Compra🔒, Mi cuenta🔒) con estados de celda + detalle inline + restaurar estado + bugs vigilados. **Secciones colapsadas por defecto** (como tarjetas con ícono). Server extendido preservando SSE/`@@DASH`/IMAP/ct-api/`STATE_MAP`/`PROD_BLOCKED`.
+- **F4+F5:** "Datos de prueba" cercado (pedido + **línea de tiempo** con avanzar-estado vía `move-state` usando los estados del contrato Capa 2 + correo esperado por paso); **drawer Investigar** (cualquier nº → ct-api) + **modal Ajustes** (B2C + Gmail).
+- **F3 (parcial):** `6-xcut.contract.spec.js` (`@xcut`) — excepciones JS **no capturadas** (Home·Categoría·Contacto) + baseline 404/catchall **BUG-518**; cableado a la fila "Errores y enlaces" del panel. Performance (Lighthouse) queda ⏳ roadmap.
+- **Evidencias organizadas (F6 parcial):** hook `afterEach` en `_helpers` (opt-in `DASH_EVIDENCE`) → `evidencias/panel/<area>/<slug>__<ok|fail>.png`; `/evidencias` scoped + **galería** de miniaturas + enlace a reporte HTML. Convención documentada en COBERTURA.
+
+**Verificación:** boot+endpoints, render sin errores JS, Responde (slicing) + Estructura por área verde, secuenciador, drawer con datos reales (orden `6182026A9KJ5`: Open/Paid/$1751.60), galería con capturas reales, `@xcut` desde el panel (3 ok + 1 baseline). **Regresión anon: 77 passed · 2 flaky · 0 fail.**
+
+**Pendientes (roadmap):** F7 Catálogo/PDP a fondo (Flujo add-to-cart real) · Móvil (reactivar `5-mobile`: overflow real + 375 + click al `<span>` interno; PDP/catálogo 375px verdes, Home en ajuste) · Performance Lighthouse · resto de adiciones F6 (exportar MD, cancelar, notificación).
+
 ### Sesión 26 (2026-06-18) — Capa 2 (N2 · efecto real) + profundización contracts N0→N1
 
 Sesión de implementación de la **Capa 2 (efecto real)**, antes diferida en el ADR F6, y de profundización de varios contracts de N0 (renderiza) a N1/N2 (funciona). **0 bugs nuevos del sitio** (sigue próximo BUG-B2C-575). Verificado todo en vivo contra QA y prod. **SIN COMMIT** (todo untracked).

@@ -4,7 +4,9 @@
 > Define la nueva arquitectura de información, las decisiones tomadas (con su porqué) y el plan de implementación por fases.
 > **No** recopia el ADR del sistema de checks (eso vive en `overview.md` §F6) ni la cobertura (eso vive en `tests/contracts/b2c/COBERTURA.md`); los referencia.
 >
-> **Estado:** DISEÑO APROBADO (decisiones cerradas con el usuario, 2026-06-19). **Nada implementado aún** (F0 sin iniciar). La supuesta "plomería rota" fue un **falso diagnóstico** por leer un checkout stale — el repo activo está sano. Ver §2.
+> **Estado:** **IMPLEMENTADO (2026-06-23)** — F0, F1, F2, F4, F5 + evidencias organizadas + F3 (calidad transversal: errores/enlaces) entregados y verificados en vivo. El `scripts/dashboard.js` ya es el rediseño por área (mapa 7×4, secciones colapsadas por defecto como tarjetas, prereq strip, resumen salud+cobertura, drawer Investigar, modal Ajustes, galería de evidencias). Pendiente de roadmap: F7 (Catálogo/PDP a fondo) y Móvil (reactivación de `5-mobile`) y Performance (Lighthouse). Ver §15 (estado por fase).
+>
+> _Historia: DISEÑO APROBADO 2026-06-19; la supuesta "plomería rota" fue un falso diagnóstico por leer un checkout stale — el repo activo estaba sano (§2)._
 > **Origen:** sesión de arquitectura del 2026-06-19. El detonante fue una incoherencia notada por el usuario
 > (validaciones disparejas y dispersas entre "home" y "pdp/categorías") que reveló un problema de fondo:
 > **la UI creció por acreción, no por diseño** — varias taxonomías encimadas, conceptos duplicados, feedback fragmentado.
@@ -265,3 +267,21 @@ Cerradas con el usuario el 2026-06-19, vía preguntas estructuradas:
 28. Anti-flaky: **endurecer en la fuente primero**.
 29. Implementación: **reescritura limpia** (preservar server). Paso 0 = prep ligera (slicing área en `_targets`, recrear `COBERTURA.md`); **no hay plomería rota** (era un checkout stale).
 30. Este doc vive en **archivo propio** (no en el overview).
+
+---
+
+## 15. Estado por fase (implementación 2026-06-23)
+
+| Fase | Estado | Notas |
+|---|---|---|
+| **F0 · Prep** | ✅ | `area` por HEALTH_URL + `healthUrls()` (slicing por `DASH_AREA`) + URL de Servicios; `tests/COBERTURA.md` recreado. |
+| **F1 · Esqueleto UI** | ✅ | Barra superior (ambiente/ver navegador headless-default/⚙), prereq strip (semáforo: sitio/B2C/IMAP/CT), acción maestra + livebar sticky, resumen salud+cobertura. |
+| **F2 · Mapa por área** | ✅ | 7×4 celdas con estados (✓/✕/○/⏳/—), correr-celda + correr-área (secuenciador) + "Revisar sitio" (master, lectura), Flujo mutante con candado, restaurar estado, bugs vigilados, detalle inline. Secciones **colapsadas por defecto** como tarjetas. |
+| **F3 · Calidad transversal** | ◑ parcial | "Errores y enlaces" = `6-xcut.contract.spec.js` (`@xcut`): excepciones JS no capturadas (Home·Categoría·Contacto) + baseline 404/catchall BUG-518. Cableado al panel. **Performance (Lighthouse) = ⏳ roadmap** (sin dependencia nueva este pase). |
+| **F4 · Datos de prueba** | ✅ | Pedido + línea de tiempo (avanzar estado vía `move-state` con los estados del contrato Capa 2) + correo esperado por paso + pipeline auto. Cercado QA-only. |
+| **F5 · Investigar + Ajustes** | ✅ | Drawer Investigar (cualquier nº → ct-api estado/pagos/historial + correos IMAP) + modal Ajustes (B2C + Gmail, generar sesión, probar IMAP). |
+| **F6 · Adiciones** | ◑ parcial | ✅ Galería de **evidencias** organizadas (`evidencias/panel/<area>/`, captura opt-in vía hook `afterEach`) + enlace al **reporte HTML**. ⏳ Resto (exportar Markdown, cancelar corrida, notificación, regenerar sesión contextual). |
+| **F7 · Catálogo/PDP a fondo** | ⏳ roadmap | Flujo N1 add-to-cart real / galería / filtros / acordeones / CP — celda Flujo de PDP sigue ⏳. |
+| **Móvil** | ⏳ roadmap | `5-mobile` con overflow REAL + viewport 375 explícito + click al `<span>` interno de la hamburguesa; PDP/catálogo 375px verdes. Ver estado al cierre en overview. |
+
+**Verificación en vivo (2026-06-23):** boot + endpoints, render sin errores JS de consola, Responde (slicing `DASH_AREA`) + Estructura por área en verde, secuenciador, drawer con datos reales de ct-api, galería con capturas reales, `@xcut` desde el panel (3 ok + baseline). Regresión anon **77 passed · 2 flaky · 0 fail**.

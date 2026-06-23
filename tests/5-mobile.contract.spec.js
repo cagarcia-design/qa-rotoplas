@@ -20,47 +20,59 @@
 // Correr: npm run check:b2c:contracts  (o npm run check:b2c)
 
 const { test, expect, irA, seedCobertura } = require('./_helpers');
-const { devices } = require('@playwright/test');
 const { PRODUCTO, COBERTURA_SEED } = require('./_targets');
 const { HEALTH_URLS } = require('./_targets');
 
-test.use({ ...devices['iPhone SE'] }); // 375×667, isMobile, hasTouch
+// Viewport móvil EXPLÍCITO 375×667 (no devices['iPhone SE'], que es 320 — ver finding 3
+// del aparcado s26). isMobile+hasTouch para que el sitio sirva su layout de celular.
+test.use({ viewport: { width: 375, height: 667 }, isMobile: true, hasTouch: true });
 
 const CATEGORIA = HEALTH_URLS.find((u) => /\/products\//.test(u.url));
 
-/** ¿La página NO desborda horizontalmente? (tolerancia 2px por redondeo). */
+/**
+ * ¿La página NO desborda horizontalmente DE VERDAD?
+ * `scrollWidth <= clientWidth` daba FALSO POSITIVO (finding 1, s26): un drawer off-canvas
+ * (`.drawer-panel`, right:-646) infla scrollWidth aunque el body tiene overflow-x:hidden
+ * → no hay scroll real. Medimos el overflow REAL: intentamos scrollear a la derecha y
+ * vemos si la página se movió. Si scrollX queda en 0, no hay scroll horizontal real.
+ */
 async function sinOverflowX(page) {
   return page.evaluate(() => {
-    const d = document.documentElement;
-    return d.scrollWidth <= d.clientWidth + 2;
+    const x0 = window.scrollX;
+    window.scrollTo(400, window.scrollY);
+    const movido = window.scrollX;
+    window.scrollTo(x0, window.scrollY);
+    return movido === 0;
   });
 }
 
 test.describe('@contract @mobile Móvil 375px — layout y navegación', () => {
-  // ⏸️ PENDIENTE (s26) — aparcado tras diagnóstico en vivo. Ajustes ANTES de activar:
-  //   1. Overflow: el check `scrollWidth <= clientWidth` da FALSO POSITIVO por un drawer
-  //      off-canvas (`.drawer-panel.header-extension`, right:646). El body tiene
-  //      overflow-x:hidden → no hay scroll real. Fix: medir overflow REAL con intento de
-  //      scroll → `window.scrollTo(200,0); window.scrollX === 0` (no scrollWidth).
-  //   2. Hamburguesa: `label[for="open-menu"]` EXISTE pero reporta width 0 (el icono
-  //      visible es el `<span><svg>` interno) → toBeVisible falla. Fix: toBeAttached, o
-  //      anclar al svg/span interno.
-  //   3. iPhone SE = 320px de ancho (no 375). Si se quiere 375, viewport explícito.
-  test.skip(true, 'WIP móvil — ver findings arriba (s26). Reactivar tras ajustar checks.');
 
-
-  test('Home: header + hamburguesa visibles, sin overflow horizontal', async ({ page }) => {
+  // ⏸️ Los 2 tests de Home (hamburguesa/menú) siguen parqueados (s27): el toggle del
+  // menú es un handler Qwik `on:click` SIN `<input>` nativo y `.mobile-menu` aparece
+  // duplicado (BUG-005, nodos desktop/mobile) → abrir+asertar el menú en headless
+  // necesita inspección de DOM en vivo (cuál `.mobile-menu` se hace visible). PDP y
+  // catálogo a 375px SÍ están activos y verdes (overflow real + viewport explícito).
+  test('Home: header + hamburguesa presentes, sin overflow horizontal', async ({ page }) => {
+    test.skip(true, 'WIP móvil: menú Qwik on:click + .mobile-menu duplicado (BUG-005). Ver nota arriba.');
     await irA(page, '/');
     await expect(page.locator('header').first()).toBeVisible();
-    // Hamburguesa móvil (label que togglea #open-menu). Ancla del inventario I.1.
-    await expect(page.locator('label[for="open-menu"]').first()).toBeVisible();
+    // La hamburguesa es un `label[for="open-menu"]` con width 0 (finding 2, s26): el pixel
+    // visible es su `<svg>`/`<span>` interno. Aserción robusta: el control EXISTE (attached)
+    // y su ícono interno es visible.
+    const hamburguesa = page.locator('label[for="open-menu"]').first();
+    await expect(hamburguesa).toBeAttached();
+    await expect(hamburguesa.locator('svg, span, img').first()).toBeVisible();
     expect(await sinOverflowX(page), 'home desborda horizontalmente en 375px').toBeTruthy();
   });
 
   test('Hamburguesa abre el menú móvil (nav alcanzable en celular)', async ({ page }) => {
+    test.skip(true, 'WIP móvil: menú Qwik on:click + .mobile-menu duplicado (BUG-005). Ver nota arriba.');
     await irA(page, '/');
-    const hamburguesa = page.locator('label[for="open-menu"]').first();
-    await hamburguesa.click(); // click real (CDP) — Qwik checkbox toggle
+    // El `label[for="open-menu"]` tiene width 0 (el pixel visible es su <span><svg>) →
+    // Playwright NO puede clickear un elemento de 0px. Clickeamos el <span> interno, que
+    // dispara el mismo handler Qwik `on:click`. (No hay <input id="open-menu"> nativo.)
+    await page.locator('label[for="open-menu"] span').first().click();
     // El menú móvil pasa a visible. Invariante load-bearing: la nav existe en móvil.
     await expect(page.locator('.mobile-menu').first()).toBeVisible({ timeout: 8000 });
   });
