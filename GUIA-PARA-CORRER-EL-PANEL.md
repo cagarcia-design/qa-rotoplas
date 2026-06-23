@@ -34,24 +34,37 @@ Para actualizar a la última versión: `git pull` y vuelve a correr `npm install
 
 ## Configurar tu cuenta (dentro del panel)
 
-En **Configuración (credenciales)**, captura lo tuyo y guarda:
+Pulsa el **engranaje ⚙ (arriba a la derecha)** para abrir **Ajustes** y captura lo tuyo:
 
 - **Sesión B2C** — usuario y contraseña de tu cuenta de pruebas.
 - **Gmail** — buzón + App Password (16 caracteres), solo si vas a verificar correos.
 
-Después pulsa **Generar sesión B2C** para habilitar los checks de carrito, checkout y
-cuenta (hace login una vez y guarda la sesión).
+Guarda y pulsa **Generar sesión B2C** (en el mismo Ajustes) para habilitar los checks de
+carrito, checkout y cuenta — hace login una vez y guarda la sesión. La **tira de
+prerequisitos** de arriba (semáforo: sitio · sesión B2C · correos · Commercetools) te dice
+de un vistazo qué falta antes de correr.
 
-## Las tres tarjetas
+## Cómo se ve el panel
 
-| Tarjeta | Qué hace |
+Es **una sola página por ÁREA del sitio**. Las secciones arrancan **colapsadas** (clic para
+abrir). De arriba hacia abajo:
+
+| Sección | Qué hace |
 |---|---|
-| **Checks estructurales** | "Revisar sitio" corre todo: que las páginas carguen y rendericen, los links, y la estructura crítica (~1 min). |
-| **Correos transaccionales** | Crea una orden de prueba y verifica que lleguen los correos. Requiere Gmail App Password. Solo en QA. |
-| **Crear orden** | Crea una orden de prueba sin verificar correos. Solo en QA. |
+| **Revisar sitio** (botón maestro) | Corre la revisión de **lectura** de todo el sitio, área por área, y enciende cada celda. No muta datos (~1–2 min). |
+| **Resumen** | Salud (✓/✕/○ de la última corrida) + Cobertura del mapa (cuántas celdas tienen prueba). |
+| **Mapa por área** | 7 áreas (Header/Footer, Home, Catálogo/PDP, Servicios, Institucional, Compra 🔒, Mi cuenta 🔒) × 4 columnas: **Responde** (carga + renderiza), **Estructura** (elementos críticos), **Flujo** (que funcione, 🔒 muta), **Móvil**. Clic en una celda la corre; **"Correr área"** corre su lectura. ⏳ = pendiente. |
+| **Calidad transversal** | "Errores y enlaces" (excepciones JS + 404), Performance (roadmap), PCI. |
+| **Evidencias de la última revisión** | Galería de capturas que dejan las corridas, por área. |
+| **Datos de prueba** (🔒 QA-only) | Crea un pedido de prueba, avanza sus estados (línea de tiempo) y verifica los correos. |
+| **Historial** | Las últimas corridas en este navegador. |
 
-El selector de arriba a la derecha cambia entre **QA** y **Producción**. En producción
-solo corren los checks de lectura; crear orden y correos quedan deshabilitados.
+También hay un **Investigar** (se abre sobre cualquier número de orden → estado, pagos,
+historial y correos) y el **Ajustes ⚙** ya mencionado.
+
+El selector de arriba a la derecha cambia entre **QA** y **Producción**. En producción solo
+corren los checks de lectura; los Datos de prueba (crear orden, mover estado, correos) quedan
+deshabilitados.
 
 ## Si algo falla
 
@@ -60,6 +73,6 @@ solo corren los checks de lectura; crear orden y correos quedan deshabilitados.
 | `node` no se reconoce | Node no quedó instalado, o no reiniciaste la terminal. |
 | Puerto 4599 ocupado | El panel ya está corriendo: usa la pestaña que ya tienes abierta. |
 | Checks en rojo con "browser not found" | Corre `npx playwright install chromium`. |
-| Login o carrito se saltan (ámbar) | Falta sesión: pulsa "Generar sesión B2C" o corre `npm run auth:b2c`. |
+| Login o carrito se saltan (ámbar/omitido) | Falta sesión: abre **Ajustes ⚙ → Generar sesión B2C**, o corre `npm run auth:b2c`. |
 
 Si un error te bloquea, copia el texto de la terminal y pásaselo a Jorge.

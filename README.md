@@ -64,6 +64,7 @@ B2C_BASE_URL=https://rotoplas.com.mx npm run check:b2c
 ```
 ├── README.md
 ├── GUIA-PARA-CORRER-EL-PANEL.md   ← Guía paso a paso para no-técnicos
+├── diseno-dashboard.md             ← Diseño + estado por fase del panel (rediseño por área)
 ├── package.json                    ← npm install && npm run dashboard
 ├── playwright.config.js            ← Configuración de Playwright
 ├── setup-auth-b2c.js               ← Login → rotoplas-auth-b2c.json
@@ -78,8 +79,9 @@ B2C_BASE_URL=https://rotoplas.com.mx npm run check:b2c
 │   ├── check-imap.js               ← Verifica conexión IMAP
 │   └── ct-api.js                   ← Cliente Commercetools API
 └── tests/
-    ├── _helpers.js                  ← Helpers compartidos (irA, seedCobertura…)
-    ├── _targets.js                  ← URLs, producto de prueba, fixture CP
+    ├── COBERTURA.md                 ← Mapa por área (qué celda tiene prueba / ⏳) + convención de evidencias
+    ├── _helpers.js                  ← Helpers compartidos (irA, seedCobertura, captura de evidencia…)
+    ├── _targets.js                  ← URLs (con `area`), producto de prueba, fixture CP, healthUrls()
     ├── _email.js                    ← Verificación de correos (IMAP)
     ├── 0-health.contract.spec.js    ← Capa 0: ¿las URLs dan 200?
     ├── 0-links.contract.spec.js     ← Capa 0: ¿links del footer funcionan?
@@ -102,12 +104,20 @@ B2C_BASE_URL=https://rotoplas.com.mx npm run check:b2c
     ├── 2-cart-empty.contract.spec.js ← Capa 1 @auth: carrito vacío
     ├── 2-customer.contract.spec.js   ← Capa 1 @auth: /customer y subpáginas
     ├── 2-money-path.contract.spec.js ← Capa 1 @auth: PDP → carrito → checkout
-    └── 3-capa2-pipeline.contract.spec.js ← Capa 2: pipeline CT → correo
+    ├── 3-capa2-pipeline.contract.spec.js ← Capa 2: pipeline CT → correo
+    ├── 5-mobile.contract.spec.js    ← Capa 1 @mobile 375px: PDP/catálogo (Home parqueado)
+    └── 6-xcut.contract.spec.js      ← Calidad transversal @xcut: excepciones JS + 404/catchall
 ```
+
+> **Panel rediseñado por ÁREA (2026-06): ** el dashboard organiza todo por área del sitio
+> (mapa 7×4: Responde · Estructura · Flujo · Móvil) en vez de tarjetas por tipo. Diseño y
+> estado por fase en `diseno-dashboard.md`; mapa de cobertura en `tests/COBERTURA.md`.
 
 ## Documentación de referencia
 
 - **Arquitectura completa + historial de sesiones:** `overview.md` (ADR en sección F6)
+- **Diseño del panel + estado por fase:** `diseno-dashboard.md`
+- **Mapa de cobertura por área (celdas / ⏳):** `tests/COBERTURA.md`
 - **Inventario DOM exhaustivo del sitio:** `inventario-ctas.md`
 - **Bugs conocidos (baseline):** `bugs-b2c.md`
 - **Guía para correr el panel:** `GUIA-PARA-CORRER-EL-PANEL.md`
