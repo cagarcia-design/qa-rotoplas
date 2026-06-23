@@ -14,6 +14,32 @@
 //    texto accesible y hrefs de producto. Ver SELECTOR_STABILITY abajo.
 
 const { test, expect } = require('@playwright/test');
+const fs = require('fs');
+const path = require('path');
+
+// ─── Evidencia organizada para el panel (opt-in) ─────────────────────────────
+// El panel pone DASH_EVIDENCE=1 en sus corridas → cada test deja una captura en
+//   evidencias/panel/<area>/<slug>__<ok|fail>.png   (latest por celda)
+// Las corridas por CLI NO setean la variable → el hook ni se registra (cero costo,
+// cero archivos). El historial profundo lo da el reporte HTML de Playwright.
+// El área viene de DASH_AREA (corridas por área del panel) o 'general'. Verificado
+// para que un test @health (usa `request`, no `page`) se salte la captura sin romper.
+if (process.env.DASH_EVIDENCE) {
+  const EVID_BASE = path.resolve(__dirname, '..', 'evidencias', 'panel');
+  test.afterEach(async ({ page }, testInfo) => {
+    let url = '';
+    try { url = page.url(); } catch (_) { return; }            // sin page (test @health) → skip
+    if (!url || url === 'about:blank') return;                  // no navegó → nada que capturar
+    const area = String(process.env.DASH_AREA || 'general').replace(/[^a-z0-9_-]/gi, '') || 'general';
+    const slug = (testInfo.title || 'test').toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 70) || 'test';
+    const veredicto = testInfo.status === testInfo.expectedStatus ? 'ok' : 'fail';
+    try {
+      fs.mkdirSync(path.join(EVID_BASE, area), { recursive: true });
+      await page.screenshot({ path: path.join(EVID_BASE, area, slug + '__' + veredicto + '.png') });
+    } catch (_) { /* la evidencia jamás rompe el test */ }
+  });
+}
 
 /**
  * SELECTOR_STABILITY — la regla de oro de esta suite.

@@ -81,40 +81,68 @@ const SERVICIO = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────
+// ÁREAS DEL SITIO — eje organizador del panel (rediseño 2026-06-19).
+// El panel agrupa TODO por área del sitio (un solo hogar por concepto). Cada
+// HEALTH_URL declara a qué área pertenece → el panel puede correr la dimensión
+// "Responde" (200 + render) recortada POR ÁREA, en vez de un bloque monolítico.
+// Las claves DEBEN coincidir con las de AREAS en scripts/dashboard.js.
+//   cascaron · home · pdp · servicios · institucional · compra · cuenta
+// ─────────────────────────────────────────────────────────────────────────
+const AREA = {
+  CASCARON: 'cascaron', HOME: 'home', PDP: 'pdp', SERVICIOS: 'servicios',
+  INSTITUCIONAL: 'institucional', COMPRA: 'compra', CUENTA: 'cuenta',
+};
+
+// ─────────────────────────────────────────────────────────────────────────
 // CAPA 0 · HEALTH — URLs críticas que DEBEN responder 200 tras un deploy.
 // Solo la columna vertebral pública. Confirmadas como existentes en el inventario.
 // ⚠️ /traking/ es la correcta; /tracking/ da error (BUG-B2C-097) → NO incluir esa.
+// Cada entrada lleva `area` → el panel llena la celda "Responde" de cada área.
 // ─────────────────────────────────────────────────────────────────────────
 const HEALTH_URLS = [
-  // Entrada + auth
-  { nombre: 'Home', url: abs('/') },
-  { nombre: 'Login', url: abs('/login') },
-  { nombre: 'Signup', url: abs('/signup') },                              // /registro/ NO funciona (BUG-056)
-  { nombre: 'Forgot password', url: abs('/forgot-password/') },
+  // Entrada
+  { nombre: 'Home', url: abs('/'), area: AREA.HOME },
+  // Mi cuenta (entrada / auth)
+  { nombre: 'Login', url: abs('/login'), area: AREA.CUENTA },
+  { nombre: 'Signup', url: abs('/signup'), area: AREA.CUENTA },           // /registro/ NO funciona (BUG-056)
+  { nombre: 'Forgot password', url: abs('/forgot-password/'), area: AREA.CUENTA },
   // Las 7 plantillas de categoría (una por template; los 947 productos comparten plantilla PDP)
-  { nombre: 'Categoría — Almacenamiento', url: abs('/products/almacenamiento/') },
-  { nombre: 'Categoría — Almacenamiento Especializado', url: abs('/products/almacenamiento-especializado/') },
-  { nombre: 'Categoría — Presurización', url: abs('/products/presurizacion/') },
-  { nombre: 'Categoría — Purificación', url: abs('/products/purificacion/') },
-  { nombre: 'Categoría — Tratamiento', url: abs('/products/tratamiento/') },
-  { nombre: 'Categoría — Calentamiento', url: abs('/products/calentamiento/') },
-  { nombre: 'Categoría — Conducción', url: abs('/products/conduccion/') },
+  { nombre: 'Categoría — Almacenamiento', url: abs('/products/almacenamiento/'), area: AREA.PDP },
+  { nombre: 'Categoría — Almacenamiento Especializado', url: abs('/products/almacenamiento-especializado/'), area: AREA.PDP },
+  { nombre: 'Categoría — Presurización', url: abs('/products/presurizacion/'), area: AREA.PDP },
+  { nombre: 'Categoría — Purificación', url: abs('/products/purificacion/'), area: AREA.PDP },
+  { nombre: 'Categoría — Tratamiento', url: abs('/products/tratamiento/'), area: AREA.PDP },
+  { nombre: 'Categoría — Calentamiento', url: abs('/products/calentamiento/'), area: AREA.PDP },
+  { nombre: 'Categoría — Conducción', url: abs('/products/conduccion/'), area: AREA.PDP },
   // NOTA (s26): la PDP NO va en HEALTH_URLS a propósito. Antes apuntaba al slug FIJO
   // del SKU 310002 → si el catálogo lo da de baja, health+content daban rojo (falso
   // "regresión", que en realidad es cambio de datos). La cobertura "una PDP responde y
   // renderiza" la da ahora `1-catalog.contract.spec.js` DINÁMICAMENTE (primer producto de
   // la categoría, sin SKU fijo). El único punto con SKU fijo es `1-pdp` (deliberado: la
   // cobertura sembrada por CP lo hace determinista para asertar precio + botón habilitado).
-  // Ruta transaccional
-  { nombre: 'Carrito', url: abs('/cart/') },
-  { nombre: 'Checkout paso 1', url: abs('/checkout/1/') },
-  // Servicios clave
-  { nombre: 'Seguimiento de pedido', url: abs('/traking/') },            // /tracking/ da error (BUG-097)
-  { nombre: 'Contacto', url: abs('/contacto/') },
+  // Servicios (landing del servicio comprable — llena la celda Responde de Servicios)
+  { nombre: 'Servicios — Lavado', url: abs('/servicios-lavado/'), area: AREA.SERVICIOS },
+  // Compra (ruta transaccional)
+  { nombre: 'Carrito', url: abs('/cart/'), area: AREA.COMPRA },
+  { nombre: 'Checkout paso 1', url: abs('/checkout/1/'), area: AREA.COMPRA },
+  // Mi cuenta (seguimiento de pedido)
+  { nombre: 'Seguimiento de pedido', url: abs('/traking/'), area: AREA.CUENTA },   // /tracking/ da error (BUG-097)
+  // Institucional
+  { nombre: 'Contacto', url: abs('/contacto/'), area: AREA.INSTITUCIONAL },
 ];
 
+// Vista de HEALTH_URLS recortada por área. El panel corre "Responde" de un área
+// pasando DASH_AREA=<clave> al spawn → este helper deja solo las URLs de esa área.
+// Sin DASH_AREA (o 'all') devuelve todas → comportamiento monolítico de siempre.
+// Es deliberado que viva aquí (fuente única) y no en cada spec.
+function healthUrls() {
+  const a = process.env.DASH_AREA;
+  if (!a || a === 'all') return HEALTH_URLS;
+  return HEALTH_URLS.filter((u) => u.area === a);
+}
+
 module.exports = {
-  BASE, abs, HEALTH_URLS,
+  BASE, abs, HEALTH_URLS, healthUrls, AREA,
   PRODUCTO, COBERTURA_SEED,
   SERVICIO,
 };

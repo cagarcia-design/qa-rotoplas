@@ -21,11 +21,11 @@
 // Correr: npm run check:b2c:content   (o npm run check:b2c para todo)
 
 const { test, expect, irA } = require('./_helpers');
-const { HEALTH_URLS } = require('./_targets');
+const { healthUrls } = require('./_targets');
 
 test.describe('@content Contenido mínimo por URL', () => {
 
-  for (const { nombre, url } of HEALTH_URLS) {
+  for (const { nombre, url } of healthUrls()) {
     test(`${nombre} — renderiza contenido real (title + header), no solo 200`, async ({ page }) => {
       await irA(page, url);
 

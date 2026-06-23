@@ -7,10 +7,10 @@
 // Correr: npm run check:b2c:health
 
 const { test, expect, statusDe } = require('./_helpers');
-const { HEALTH_URLS } = require('./_targets');
+const { healthUrls } = require('./_targets');
 
 test.describe('@health Capa 0 — URLs críticas responden 200', () => {
-  for (const { nombre, url } of HEALTH_URLS) {
+  for (const { nombre, url } of healthUrls()) {
     test(`${nombre} → 200`, async ({ request }) => {
       const status = await statusDe(request, url);
       expect(status, `${nombre} (${url}) devolvió ${status}, se esperaba 200`).toBe(200);
