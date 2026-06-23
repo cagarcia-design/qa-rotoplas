@@ -30,7 +30,7 @@ Un solo eje: **por ÁREA del sitio**. Cada área se mide en 4 dimensiones (natur
 |---|---|---|---|---|---|
 | 1 | **Header y Footer** | — | `1-global-layout` · `0-links` ✓ | buscador · links a destino ⏳ | ⏳ |
 | 2 | **Home** | `/` ✓ | `1-home` ✓ | selector de soluciones navega ⏳ | ⏳ |
-| 3 | **Catálogo / PDP** | 7 categorías ✓ | `1-pdp` · `1-catalog` ✓ | add-to-cart real · galería · filtros · acordeones · CP ⏳ (F7) | ⏳ |
+| 3 | **Catálogo / PDP** | 7 categorías ✓ | `1-pdp` · `1-catalog` ✓ | `7-pdp-flujo` ✓ (galería · acordeones · compra por CP) + add-to-cart persiste en `2-money-path` 🔒 | ⏳ |
 | 4 | **Servicios** | `/servicios-lavado/` ✓ | `1-servicios` · `1-servicio-lavado` ✓ | compra del servicio ⏳ | ⏳ |
 | 5 | **Institucional** | contacto ✓ | `1-contacto` · `1-faq` · `1-distribuidores` · `1-legales` ✓ | contacto submit · faq acordeón · distribuidores encadenado ⏳ | ⏳ |
 | 6 | **Compra (carrito → pago)** 🔒 | cart · checkout1 ✓ | `2-cart-empty` · `2-money-path` ✓ | `3-money-path-purchase` ✓ (mutante 🔒) | ⏳ |
@@ -65,7 +65,7 @@ No cargan celdas del mapa — viven en su propia línea. Si uno **pasa** (se arr
 
 Estas celdas están **diseñadas pero sin prueba**. Orden de `../diseno-dashboard.md` §8–9.
 
-1. **Flujo Catálogo/PDP a fondo (F7)** — add-to-cart real que persiste · galería de *este* producto · filtros/orden · acordeones · disponibilidad por CP.
+1. ~~**Flujo Catálogo/PDP a fondo (F7)**~~ **✅ N1 (s27):** `7-pdp-flujo.contract.spec.js` (`@flujo`) — galería muestra ESTE producto (SKU en `<img>`), acordeones `<details>` abren, compra habilitada por CP (seed). El add-to-cart que **persiste** ya vive en `2-money-path @auth`. _Resta (no bloqueante): filtros/orden de categoría._
 2. **Móvil 375px** — `5-mobile.contract.spec.js`: **PDP y catálogo a 375px ACTIVOS y verdes** (overflow REAL por intento-de-scroll, viewport 375 explícito). **Home (hamburguesa/menú) parqueado** (`test.skip` por test): el menú es handler Qwik `on:click` sin `<input>` y `.mobile-menu` aparece duplicado (BUG-005) → abrir+asertar necesita inspección de DOM en vivo. El panel mantiene la columna Móvil como ⏳ (no corre móvil por área).
 3. **Calidad transversal (F3)** — specs nuevos: consola JS · links a destino · 404 · Lighthouse.
 4. **Flujos de área restantes** — buscador (Header) · selector de soluciones (Home) · compra de servicio (Servicios) · contacto submit / faq acordeón / distribuidores encadenado (Institucional).

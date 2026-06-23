@@ -111,7 +111,7 @@ PAYMENT_STATES.forEach(s  => STATE_MAP[`pay:${s}`]   = { flag: '--b2c-set-paymen
 const AREAS = {
   cascaron:      { label: 'Header y Footer',         lock: false, responde: false, files: ['1-global-layout'], flujo: null },
   home:          { label: 'Home',                    lock: false, responde: true,  files: ['1-home'], flujo: null },
-  pdp:           { label: 'Catálogo / PDP',          lock: false, responde: true,  files: ['1-pdp', '1-catalog'], flujo: null },
+  pdp:           { label: 'Catálogo / PDP',          lock: false, responde: true,  files: ['1-pdp', '1-catalog'], flujo: 'pdp-flujo', flujoLabel: 'Galería · acordeones · compra por CP' },
   servicios:     { label: 'Servicios',               lock: false, responde: true,  files: ['1-servicios', '1-servicio-lavado'], flujo: null },
   institucional: { label: 'Institucional',           lock: false, responde: true,  files: ['1-contacto', '1-faq', '1-distribuidores', '1-legales'], flujo: null },
   compra:        { label: 'Compra (carrito → pago)', lock: true,  responde: true,  files: ['2-cart-empty', '2-money-path'], auth: true, flujo: 'purchase',    flujoLabel: 'Compra E2E → nº de orden' },
@@ -134,6 +134,8 @@ const ACTIONS = {
   'forms-email':    { kind: 'pw', grep: ['--grep', '@email'],    usesBrowser: true, label: 'Forms + correo (forgot reset)' },
   // Calidad transversal (site-wide): excepciones JS no capturadas + 404/catchall.
   'xcut':           { kind: 'pw', grep: ['--grep', '@xcut'],     usesBrowser: true, label: 'Errores y enlaces (transversal)' },
+  // Flujo N1 de Catálogo/PDP (lectura, no muta): galería · acordeones · compra por CP.
+  'pdp-flujo':      { kind: 'pw', grep: ['--grep', '@flujo'],    usesBrowser: true, label: 'Catálogo/PDP a fondo (N1)' },
   // Lectura global (atajo): todo lo no-mutante. La acción maestra del panel
   // secuencia por celda; esta queda como respaldo de "una sola corrida".
   'check-all':      { kind: 'pw', grep: ['--grep-invert', '@capa2|@smoke'], usesBrowser: true, label: 'Revisar sitio (lectura)' },
@@ -1328,10 +1330,10 @@ function buildMap(areas){
    else if(dim.key==='movil'){cell.classList.add('is-pend');cell.disabled=true;setPill(pill,'pend');cell.title='Móvil 375px parqueado (5-mobile en test.skip). Ver tests/COBERTURA.md';}
    else if(dim.key==='flujo'&&!a.flujo){cell.classList.add('is-pend');cell.disabled=true;setPill(pill,'pend');cell.title='Flujo aún sin prueba. Ver tests/COBERTURA.md';}
    else{setPill(pill,'idle');
-    if(dim.key==='flujo')cell.classList.add('is-flujolock');
+    if(dim.key==='flujo'&&a.lock)cell.classList.add('is-flujolock'); // candado solo si muta
     cell.setAttribute('data-cell',dim.key);cell.setAttribute('data-area',a.key);
     if(cfg.action)cell.setAttribute('data-cellaction',cfg.action);
-    cell.title=(a.flujo&&dim.key==='flujo'?'Flujo mutante 🔒 (QA-only) — ':'')+dim.label+': '+cellValText(a,dim.key);
+    cell.title=(a.lock&&dim.key==='flujo'?'Flujo mutante 🔒 (QA-only) — ':'')+dim.label+': '+cellValText(a,dim.key);
     (function(c){c.addEventListener('click',function(){runOne(cfg);});})(cell);
    }
    cells.appendChild(cell);
