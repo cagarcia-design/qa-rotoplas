@@ -1,6 +1,6 @@
 # Inventario de CTAs / DOM Contracts — B2C Rotoplas (qarotoplasmx.io)
 
-> **Propósito:** Mapeo exhaustivo y modular del sitio B2C. Base para escribir `tests/contracts/b2c/` que detecten regresiones post-deploy del tipo "un elemento desapareció, un link cambió de href, una sección ya no renderiza".
+> **Propósito:** Mapeo exhaustivo y modular del sitio B2C. Base para escribir `tests/` que detecten regresiones post-deploy del tipo "un elemento desapareció, un link cambió de href, una sección ya no renderiza".
 >
 > **Estructura del documento (5 partes; la Parte V / matriz B2B↔B2C fue descartada — no aporta a este equipo):**
 > 1. **COMPONENTES REUSABLES** — fuente de verdad para DOM contracts. Cada componente se documenta UNA vez.
@@ -7359,7 +7359,7 @@ Emulado iPhone-12-class (390×844) y re-verificados los flujos clave autenticado
 ---
 
 # Parte VI — DOM CONTRACTS EJECUTABLES
-_Pendiente: generar al cerrar F1A. Snippets Playwright agrupados por componente para `tests/contracts/b2c/`._
+_Pendiente: generar al cerrar F1A. Snippets Playwright agrupados por componente para `tests/`._
 
 ### Plantilla por componente:
 ```js

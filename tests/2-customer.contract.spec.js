@@ -1,4 +1,4 @@
-// tests/contracts/b2c/2-customer.contract.spec.js
+// tests/2-customer.contract.spec.js
 // CAPA 1 · CONTRACT — Área de cliente /customer/* (autenticado).
 // Verifica que las páginas del área de cuenta rendericen contenido (no estén
 // en blanco ni redirijan a error). Los selectores son deliberadamente laxos

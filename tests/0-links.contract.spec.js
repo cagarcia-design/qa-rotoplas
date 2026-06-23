@@ -1,4 +1,4 @@
-// tests/contracts/b2c/0-links.contract.spec.js
+// tests/0-links.contract.spec.js
 // CAPA 0 · HEALTH — Link-check del cascarón (header + footer).
 // Extrae TODOS los <a href> del header y footer y verifica que los INTERNOS
 // respondan 200. Automatiza la tarea recurrente de "revisar el footer" — atrapa

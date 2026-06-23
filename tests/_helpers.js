@@ -1,4 +1,4 @@
-// tests/contracts/b2c/_helpers.js
+// tests/_helpers.js
 // Helpers compartidos por los checks post-liberación del B2C (qarotoplasmx.io).
 //
 // QUÉ SON ESTOS CHECKS: pruebas de humo estructurales post-deploy. Detectan

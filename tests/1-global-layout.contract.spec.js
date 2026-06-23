@@ -1,4 +1,4 @@
-// tests/contracts/b2c/1-global-layout.contract.spec.js
+// tests/1-global-layout.contract.spec.js
 // CAPA 1 · CONTRACT — Cascarón global (header + nav + footer).
 // Estos componentes viven en TODA página → un break aquí es global → máxima
 // prioridad. Por eso es el primer contract.

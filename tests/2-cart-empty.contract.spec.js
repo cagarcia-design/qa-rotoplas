@@ -1,4 +1,4 @@
-// tests/contracts/b2c/2-cart-empty.contract.spec.js
+// tests/2-cart-empty.contract.spec.js
 // CAPA 1 · CONTRACT — Carrito vacío (autenticado).
 // El B2C no persiste el add-to-cart anónimo (BUG-B2C-481), por lo que el estado
 // vacío SOLO es visible con sesión iniciada. Verifica que el empty state renderice

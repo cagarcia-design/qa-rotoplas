@@ -1,4 +1,4 @@
-// tests/contracts/b2c/3-capa2-pipeline.contract.spec.js
+// tests/3-capa2-pipeline.contract.spec.js
 // CAPA 2 · @capa2 — Pipeline de notificaciones ORQUESTADO (CT → correo).
 //
 // QUÉ HACE: sobre una orden, mueve el status vía Commercetools y verifica que el

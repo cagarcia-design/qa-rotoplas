@@ -1,4 +1,4 @@
-// tests/contracts/b2c/1-content.contract.spec.js
+// tests/1-content.contract.spec.js
 // CAPA 1 · CONTENT — Contenido mínimo por URL crítica.
 //
 // POR QUÉ ESTA CAPA EXISTE (decisión del usuario s21):

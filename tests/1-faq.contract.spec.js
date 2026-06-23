@@ -1,4 +1,4 @@
-// tests/contracts/b2c/1-faq.contract.spec.js
+// tests/1-faq.contract.spec.js
 // CAPA 1 · CONTRACT — Preguntas frecuentes /preguntas-frecuentes/.
 // Verifica que la página de FAQs renderice con sus tabs de categoría y
 // acordeones. Es la principal fuente de autoservicio del cliente.

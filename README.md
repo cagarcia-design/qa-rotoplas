@@ -20,10 +20,23 @@ npm install        # instala dependencias y descarga Chromium (postinstall)
 
 ```bash
 npm run dashboard               # Panel web local → http://127.0.0.1:4599 (RECOMENDADO)
-npm run check:b2c               # Todo (health + contracts + content, ~1 min)
+npm run check:b2c               # Run rápido SIN efectos secundarios (health + contracts + content)
 npm run check:b2c:anon          # Solo checks que NO requieren login
 npm run report                  # Reporte HTML del último run
 ```
+
+### Checks profundos ON-DEMAND (hacen efectos reales — fuera del run rápido)
+
+```bash
+npm run check:b2c:purchase      # Compra E2E real (login→checkout→Pagar) → nº de orden. QA-only.
+npm run check:b2c:login         # Login camino feliz: credenciales válidas → sesión. QA-only.
+npm run check:b2c:forms:email   # Forms con efecto: forgot-password → correo de reset (QA+prod).
+```
+
+> Estos crean datos/correos reales y por eso NO entran en `check:b2c` (tienen tag `@smoke`).
+> La verificación de que el correo LLEGÓ es por agente (Gmail MCP, Modo A): el spec hace el
+> submit + imprime `@@EMAIL_EXPECT {to,subjectRe,sinceTs}` y el agente/dashboard confirma el
+> arribo. Con App Password de Gmail (`GMAIL_IMAP_PASS`) la verificación corre autónoma por IMAP.
 
 ### Para la ruta autenticada (carrito/checkout)
 
@@ -71,9 +84,14 @@ B2C_BASE_URL=https://rotoplas.com.mx npm run check:b2c
     ├── 0-health.contract.spec.js    ← Capa 0: ¿las URLs dan 200?
     ├── 0-links.contract.spec.js     ← Capa 0: ¿links del footer funcionan?
     ├── 1-content.contract.spec.js   ← Capa 1: ¿renderiza contenido real?
+    ├── 1-catalog.contract.spec.js   ← Capa 1 (N1): categorías LISTAN productos + PDP alcanzable
     ├── 1-global-layout.contract.spec.js ← Capa 1: header/nav/footer
     ├── 1-home.contract.spec.js      ← Capa 1: carrusel, soluciones
     ├── 1-pdp.contract.spec.js       ← Capa 1: plantilla PDP
+    ├── 1-login.smoke.spec.js        ← Capa 2 (N2) @smoke: login válido → sesión (QA-only)
+    ├── 2-pci-baseline.contract.spec.js ← Baseline PCI @auth: guard BUG-119 (PAN expuesto)
+    ├── 3-money-path-purchase.smoke.spec.js ← Capa 2 (N2) @smoke: compra E2E → nº de orden (QA-only)
+    ├── 4-forms-email.smoke.spec.js  ← Capa 2 (N2) @email: submit + el correo SALE
     ├── 1-forms.contract.spec.js     ← Capa 1: formularios (login, signup…)
     ├── 1-contacto.contract.spec.js  ← Capa 1: página de contacto
     ├── 1-faq.contract.spec.js       ← Capa 1: FAQs

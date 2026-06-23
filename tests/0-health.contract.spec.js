@@ -1,4 +1,4 @@
-// tests/contracts/b2c/0-health.contract.spec.js
+// tests/0-health.contract.spec.js
 // CAPA 0 · HEALTH — ¿el ambiente respondió tras el deploy?
 // La capa más barata y rápida: una petición HTTP por URL crítica, sin renderizar.
 // Si esto falla, no tiene sentido correr las capas caras (contracts/smoke).

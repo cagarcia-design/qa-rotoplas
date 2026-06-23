@@ -13,6 +13,7 @@
     "check:b2c:anon": "npx playwright test --project=b2c-contracts --grep-invert \"@auth|@capa2|@smoke\"",
     "check:b2c:forms:email": "npx playwright test --project=b2c-contracts --grep @email",
     "check:b2c:purchase": "npx playwright test --project=b2c-contracts --grep @purchase",
+    "check:b2c:login": "npx playwright test --project=b2c-contracts --grep @login",
     "check:b2c:capa2": "npx playwright test --project=b2c-contracts --grep @capa2",
     "check:b2c:capa2:auto": "node scripts/capa2-run.js",
     "report": "npx playwright show-report",

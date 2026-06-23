@@ -224,7 +224,7 @@ async function agregarProductoFisico(page) {
  * Trigger anclado a `img[class*="banner-desk"][src*="a634cf17"]` → el ÚNICO visible (las
  * otras 3 copias `banner-mobile` están ocultas, BUG-005). Apertura con hover (nudge
  * qvisible) + reintento de click. Mismo recorrido probado en
- * tests/contracts/b2c/1-servicio-lavado.contract.spec.js (s21).
+ * tests/1-servicio-lavado.contract.spec.js (s21).
  */
 async function agregarServicioLavado(page) {
   await irA(page, SERVICIO_SLUG, 3500);

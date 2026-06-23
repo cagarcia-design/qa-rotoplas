@@ -1,4 +1,4 @@
-// tests/contracts/b2c/1-legales.contract.spec.js
+// tests/1-legales.contract.spec.js
 // CAPA 1 · CONTRACT — Páginas legales.
 // Verifica que aviso de privacidad y seguridad de la información rendericen
 // contenido. Términos y condiciones redirige cross-domain (BUG-037) → no se

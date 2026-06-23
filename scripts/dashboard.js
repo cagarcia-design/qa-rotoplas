@@ -47,7 +47,7 @@ const envBase = (e) => (ENVS[e] ? ENVS[e].base : ENVS.qa.base);
 // GUARD de seguridad: acciones que MUTAN datos reales vía el sitio (crean pedidos y
 // disparan correos a clientes reales). PROHIBIDAS en producción — solo disponibles en QA.
 // Este guard vive en el SERVIDOR (la barrera real); la UI además las deshabilita visualmente.
-const PROD_BLOCKED = new Set(['crear-orden', 'capa2-auto']);
+const PROD_BLOCKED = new Set(['crear-orden', 'capa2-auto', 'purchase', 'login-check']);
 
 // ─── Configuración editable desde el panel (sección "Configuración") ─────────
 // Permite a alguien no-técnico capturar las credenciales sin abrir el .env a mano.
@@ -121,7 +121,7 @@ PAYMENT_STATES.forEach(s  => STATE_MAP[`pay:${s}`]      = { flag: '--b2c-set-pay
 const ACTIONS = {
   'crear-orden':    { kind: 'node', argv: ['scripts/crear-orden-b2c.js'], usesBrowser: true,  usesOrderOpts: true, label: 'Crear orden B2C' },
   'capa2-auto':     { kind: 'node', argv: ['scripts/capa2-run.js'],       usesBrowser: true,  label: 'Pipeline Capa 2 (auto)' },
-  'health':         { kind: 'pw',   grep: ['--grep', '@health'],                              label: 'Health check (16 URLs + link-check)' },
+  'health':         { kind: 'pw',   grep: ['--grep', '@health'],                              label: 'Health check (15 URLs + link-check)' },
   'content':        { kind: 'pw',   grep: ['--grep', '@content'],          usesBrowser: true, label: 'Contenido mínimo por URL' },
   // Check en capas (fusión Health+Content, decisión s24): el 200 es el paso rápido
   // interno; el render real (title+header) es la prueba que vale. Una sola fila en la
@@ -129,7 +129,12 @@ const ACTIONS = {
   'responde':       { kind: 'pw',   grep: ['--grep', '@health|@content'],  usesBrowser: true, label: 'Responden y renderizan' },
   'contracts':      { kind: 'pw',   grep: ['--grep', '@contract'],         usesBrowser: true, label: 'Contracts DOM' },
   'forms':          { kind: 'pw',   grep: ['--grep', '@forms'],           usesBrowser: true, label: 'Formularios' },
-  'check-all':      { kind: 'pw',   grep: ['--grep-invert', '@capa2'],     usesBrowser: true, label: 'Revisar sitio (todos los checks)' },
+  'check-all':      { kind: 'pw',   grep: ['--grep-invert', '@capa2|@smoke'], usesBrowser: true, label: 'Revisar sitio (todos los checks)' },
+  // Checks ON-DEMAND de Capa 2 (N2 efecto real) — hacen efectos reales, por eso van
+  // aparte del run rápido (s26). purchase/login: QA-only (PROD_BLOCKED). forms-email: QA+prod.
+  'purchase':       { kind: 'pw',   grep: ['--grep', '@purchase'],         usesBrowser: true, label: 'Compra E2E → nº de orden (QA)' },
+  'login-check':    { kind: 'pw',   grep: ['--grep', '@login'],            usesBrowser: true, label: 'Login → sesión (QA)' },
+  'forms-email':    { kind: 'pw',   grep: ['--grep', '@email'],            usesBrowser: true, label: 'Forms + correo (forgot reset)' },
   'check-imap':     { kind: 'node', argv: ['scripts/check-imap.js'],                           label: 'Verificar IMAP' },
   'gen-auth-b2c':   { kind: 'node', argv: ['setup-auth-b2c.js'],          usesBrowser: true,    label: 'Generar sesión B2C (login)' },
   'order-status':   { kind: 'node', argv: ['scripts/ct-api.js', '--b2c'],          needsOrder: true, label: 'Ver estado de orden' },
@@ -148,10 +153,10 @@ const ACTIONS = {
 const AREAS = {
   'cascaron':      { label: 'Cascarón global',   files: ['1-global-layout'] },
   'home':          { label: 'Home',              files: ['1-home'] },
-  'pdp':           { label: 'Catálogo / PDP',    files: ['1-pdp'] },
+  'pdp':           { label: 'Catálogo / PDP',    files: ['1-pdp', '1-catalog'] },
   'servicios':     { label: 'Servicios',         files: ['1-servicios', '1-servicio-lavado'] },
   'dinero':        { label: 'Ruta del dinero',   files: ['2-cart-empty', '2-money-path'], auth: true },
-  'cuenta':        { label: 'Mi cuenta',         files: ['2-customer'],                    auth: true },
+  'cuenta':        { label: 'Mi cuenta',         files: ['2-customer', '2-pci-baseline'],  auth: true },
   'institucional': { label: 'Institucional',     files: ['1-contacto', '1-faq', '1-distribuidores', '1-legales'] },
 };
 const areaSpecPath = (f) => `tests/${f}.contract.spec.js`;
@@ -782,6 +787,7 @@ const PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8">
 
  .src{display:block;font-size:11px;color:var(--mut);font-weight:400;margin-top:3px;font-family:'IBM Plex Mono',monospace}
  .errsum{background:#fef2f2;border:1px solid #fecaca;border-radius:9px;padding:10px 13px;margin-top:12px;font-size:13px;color:#991b1b;line-height:1.5}
+ .emailexp{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:10px 13px;margin-top:12px;font-size:13px;color:#166534;line-height:1.5}
  .errsum b{color:#7f1d1d}
  .lastrun{font-size:11px;color:var(--mut);margin-left:18px;white-space:nowrap}
 </style></head><body>
@@ -860,7 +866,7 @@ const PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8">
      <span class="nm">Respuesta y formularios</span>
     </div>
     <div class="zona-grid">
-     <button class="zona" id="z-responde" data-action="responde" data-st="st-responde" data-log="log-checks" data-live="live-checks" title="¿Responden y renderizan? — 16 URLs responden 200 y pintan contenido">
+     <button class="zona" id="z-responde" data-action="responde" data-st="st-responde" data-log="log-checks" data-live="live-checks" title="¿Responden y renderizan? — 15 URLs responden 200 y pintan contenido">
       <span class="pill" id="st-responde"><span class="d"></span> —</span>
       <span class="znm">¿Responden y renderizan?</span>
      </button>
@@ -869,6 +875,24 @@ const PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8">
       <span class="znm">Formularios</span>
      </button>
     </div>
+    <div class="areahead">
+     <span class="nm">Checks on-demand · efecto real (crean orden / mandan correo — QA)</span>
+    </div>
+    <div class="zona-grid">
+     <button class="zona" data-action="purchase" data-st="st-purchase" data-log="log-checks" data-live="live-checks" title="Compra E2E (login→checkout→Pagar) → nº de orden. Crea una orden real. QA-only (bloqueado en prod).">
+      <span class="pill" id="st-purchase"><span class="d"></span> —</span>
+      <span class="znm">Compra E2E → orden</span>
+     </button>
+     <button class="zona" data-action="login-check" data-st="st-login" data-log="log-checks" data-live="live-checks" title="Login válido → sesión establecida. QA-only (bloqueado en prod).">
+      <span class="pill" id="st-login"><span class="d"></span> —</span>
+      <span class="znm">Login → sesión</span>
+     </button>
+     <button class="zona" data-action="forms-email" data-st="st-femail" data-log="log-checks" data-live="live-checks" title="Forgot-password → correo de reset. Verificación de arribo por Gmail MCP. QA+prod.">
+      <span class="pill" id="st-femail"><span class="d"></span> —</span>
+      <span class="znm">Forms + correo</span>
+     </button>
+    </div>
+    <div class="emailexp" id="emailexp" style="display:none"></div>
     <div class="areahead">
      <span class="nm">Estructura crítica <span class="pill" id="st-contracts"><span class="d"></span>—</span></span>
      <button class="btn-run" data-action="contracts" data-st="st-contracts" data-log="log-checks" data-live="live-checks"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Correr todas</button>
@@ -969,6 +993,14 @@ const PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8">
 <script>
 var $=function(s){return document.querySelector(s);};
 var byId=function(id){return document.getElementById(id);};
+// Muestra la expectativa de correo emitida por los specs @email (@@EMAIL_EXPECT). El
+// arribo real se confirma fuera del panel (Gmail MCP / IMAP): este bloque dice QUÉ buscar.
+function showEmailExpect(x){
+ var el=byId('emailexp'); if(!el)return;
+ var when=x.sinceTs?new Date(x.sinceTs).toLocaleTimeString():'';
+ el.textContent='📧 Verifica que el correo llegó — para: '+(x.to||'')+' · asunto ~ '+(x.subjectRe||'')+' · desde '+when+' ('+(x.env||'')+'). Confírmalo en el inbox por Gmail MCP, o por IMAP si hay App Password.';
+ el.style.display='block';
+}
 var running=false;
 var ENV='qa';                 // ambiente activo (qa|prod) — se manda en cada corrida
 var PROD_BLOCKED=['crear-orden','capa2-auto']; // se sobrescribe desde /config
@@ -1419,6 +1451,9 @@ function run(btn){
   // Captura el nº de orden cuando la corrida la crea (stdout CAPA2_ORDER= o stderr "orden creada: X").
   var mo=d.text.match(/CAPA2_ORDER=([A-Za-z0-9]{5,24})/)||d.text.match(/orden creada:\\s*([A-Za-z0-9]{5,24})/i);
   if(mo)capturedOrder=mo[1];
+  // Captura la expectativa de correo (@@EMAIL_EXPECT) de los checks @email → la muestra.
+  var me=d.text.match(/@@EMAIL_EXPECT\\s+(\\{.*\\})/);
+  if(me){try{showEmailExpect(JSON.parse(me[1]));}catch(_){}}
  });
   es.addEventListener('done',function(e){
    var d=JSON.parse(e.data); timerStop(liveEl); var state=veredicto(d);

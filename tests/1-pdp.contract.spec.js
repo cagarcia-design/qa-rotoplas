@@ -1,4 +1,4 @@
-// tests/contracts/b2c/1-pdp.contract.spec.js
+// tests/1-pdp.contract.spec.js
 // CAPA 1 · CONTRACT — PDP (plantilla). Producto de referencia: "Base para tinaco
 // GDPV" (SKU 310002), elegido por estar disponible para CP 02800 y tener un H1
 // limpio (sin el TEST TINACO del 500545). Ver hallazgos F6 #1-#3 en overview.

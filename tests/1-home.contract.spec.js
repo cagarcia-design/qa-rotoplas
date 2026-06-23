@@ -1,4 +1,4 @@
-// tests/contracts/b2c/1-home.contract.spec.js
+// tests/1-home.contract.spec.js
 // CAPA 1 · CONTRACT — Home (anónima). La puerta de entrada del sitio.
 // Anclajes estables del inventario II.1 (fresco). El cascarón global (header/
 // footer/nav) ya lo cubre 1-global-layout; aquí solo las secciones únicas de home.

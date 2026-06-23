@@ -1,4 +1,4 @@
-// tests/contracts/b2c/1-contacto.contract.spec.js
+// tests/1-contacto.contract.spec.js
 // CAPA 1 · CONTRACT — Formulario de contacto /contacto/.
 // Verifica que el form de contacto renderice sus 7 campos y responda al submit
 // vacío con errores inline. Es la puerta de entrada para leads y soporte.

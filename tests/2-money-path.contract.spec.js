@@ -1,4 +1,4 @@
-// tests/contracts/b2c/2-money-path.contract.spec.js
+// tests/2-money-path.contract.spec.js
 // CAPA 1/2 · CONTRACT — Ruta del dinero AUTENTICADA (PDP → carrito → checkout p1).
 //
 // Por qué autenticado: el add-to-cart anónimo no persiste (BUG-B2C-481) → el

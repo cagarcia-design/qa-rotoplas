@@ -1,4 +1,4 @@
-// tests/contracts/b2c/_targets.js
+// tests/_targets.js
 // FUENTE ÚNICA DE VERDAD de los checks post-liberación B2C.
 //
 // Aquí vive la SELECCIÓN de DATOS que comparte la suite:
@@ -99,8 +99,12 @@ const HEALTH_URLS = [
   { nombre: 'Categoría — Tratamiento', url: abs('/products/tratamiento/') },
   { nombre: 'Categoría — Calentamiento', url: abs('/products/calentamiento/') },
   { nombre: 'Categoría — Conducción', url: abs('/products/conduccion/') },
-  // PDP representativa (plantilla de producto) — slug por ambiente (ver PRODUCTO.slug)
-  { nombre: 'PDP (plantilla)', url: abs(PRODUCTO.slug) },
+  // NOTA (s26): la PDP NO va en HEALTH_URLS a propósito. Antes apuntaba al slug FIJO
+  // del SKU 310002 → si el catálogo lo da de baja, health+content daban rojo (falso
+  // "regresión", que en realidad es cambio de datos). La cobertura "una PDP responde y
+  // renderiza" la da ahora `1-catalog.contract.spec.js` DINÁMICAMENTE (primer producto de
+  // la categoría, sin SKU fijo). El único punto con SKU fijo es `1-pdp` (deliberado: la
+  // cobertura sembrada por CP lo hace determinista para asertar precio + botón habilitado).
   // Ruta transaccional
   { nombre: 'Carrito', url: abs('/cart/') },
   { nombre: 'Checkout paso 1', url: abs('/checkout/1/') },

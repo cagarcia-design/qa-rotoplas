@@ -1,4 +1,4 @@
-// tests/contracts/b2c/1-servicios.contract.spec.js
+// tests/1-servicios.contract.spec.js
 // CAPA 1 · CONTRACT — Landing de servicios /servicios/.
 // Verifica que la página de servicios por contratación renderice con sus
 // secciones y CTAs. Es la puerta de entrada a servicios-lavado y otros.

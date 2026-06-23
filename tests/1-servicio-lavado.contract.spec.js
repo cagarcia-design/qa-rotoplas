@@ -1,4 +1,4 @@
-// tests/contracts/b2c/1-servicio-lavado.contract.spec.js
+// tests/1-servicio-lavado.contract.spec.js
 // CAPA 1 · CONTRACT — Wizard de cotización del SERVICIO de lavado (/servicios-lavado/).
 //
 // POR QUÉ ESTE CONTRACT EXISTE:

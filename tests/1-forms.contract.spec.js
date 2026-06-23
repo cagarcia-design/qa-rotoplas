@@ -1,4 +1,4 @@
-// tests/contracts/b2c/1-forms.contract.spec.js
+// tests/1-forms.contract.spec.js
 // CAPA 1 · CONTRACT — Formularios públicos críticos.
 // Verifica que los formularios de login, signup, recuperación de contraseña y
 // seguimiento de pedido rendericen sus campos y respondan al submit (sin depender

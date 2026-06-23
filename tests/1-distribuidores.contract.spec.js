@@ -1,4 +1,4 @@
-// tests/contracts/b2c/1-distribuidores.contract.spec.js
+// tests/1-distribuidores.contract.spec.js
 // CAPA 1 · CONTRACT — Buscador de distribuidores /distribuidores/.
 // Verifica que los selects encadenados estado→ciudad y el mapa de Google
 // rendericen. Es la puerta de entrada para clientes que buscan tienda física.

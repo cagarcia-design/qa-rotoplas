@@ -1,4 +1,4 @@
-// tests/contracts/b2c/_email.js
+// tests/_email.js
 // VERIFICACIÓN DE CORREO PARA EL CHECK CAPA 2 (qarotoplasmx.io).
 //
 // EL RETO QUE RESUELVE ESTE ARCHIVO:
