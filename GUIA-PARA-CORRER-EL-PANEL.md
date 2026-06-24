@@ -18,7 +18,7 @@ npm install
 
 `npm install` también descarga el navegador que usan los checks (Chromium). No hay paso extra.
 
-> **Commercetools:** pide a Jorge el archivo `.env` y déjalo en la raíz del proyecto.
+> **Commercetools:** solicita el archivo `.env` al responsable del proyecto y déjalo en la raíz.
 > No está en GitHub porque contiene secretos. Sin él, "Revisar sitio" funciona igual;
 > solo el flujo de correos lo necesita.
 
@@ -28,9 +28,13 @@ npm install
 npm run dashboard
 ```
 
-Abre http://127.0.0.1:4599. Para apagar: `Ctrl + C`.
+Abre el navegador solo en http://127.0.0.1:4599 (si no, ábrelo a mano). Para apagar: `Ctrl + C`.
 
-Para actualizar a la última versión: `git pull` y vuelve a correr `npm install`.
+> **Actualizar** (ícono de flecha circular ↻ en el header, junto al engranaje ⚙): un clic ejecuta `git pull` + `npm install` **y reinicia el panel** para aplicar los cambios — la página se recarga sola. Si falla, el mensaje explica la causa (sin conexión, conflicto, etc.) en lenguaje claro.
+>
+> **Reiniciar** (ícono de encendido ⏻, al lado): reinicia el panel sin actualizar — útil si algo se ve raro. La página se recarga sola cuando vuelve.
+>
+> Comandos manuales de respaldo: `git pull` + `npm install`.
 
 ## Configurar tu cuenta (dentro del panel)
 
@@ -74,5 +78,7 @@ deshabilitados.
 | Puerto 4599 ocupado | El panel ya está corriendo: usa la pestaña que ya tienes abierta. |
 | Checks en rojo con "browser not found" | Corre `npx playwright install chromium`. |
 | Login o carrito se saltan (ámbar/omitido) | Falta sesión: abre **Ajustes ⚙ → Generar sesión B2C**, o corre `npm run auth:b2c`. |
+| Botón **Actualizar** da error | El mensaje en pantalla explica la causa. Lo más común: **sin internet** (revisa conexión / VPN) o **archivos ocupados** (cierra VS Code u otras terminales abiertas en esta carpeta y reintenta). Si aparece "cambios locales" o "conflicto", resuélvelo con git (guarda o descarta los cambios locales); el panel sigue funcionando con la versión actual. |
+| Tras actualizar, algo se ve raro | Pulsa **Reiniciar** (⏻ en el header): recarga el panel con el código nuevo. Si aun así persiste, apaga (`Ctrl + C`) y enciende (`npm run dashboard`). |
 
-Si un error te bloquea, copia el texto de la terminal y pásaselo a Jorge.
+Si un error te bloquea, copia el texto de la terminal para diagnosticarlo.

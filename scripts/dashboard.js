@@ -159,6 +159,8 @@ const ACTIONS = {
   'order-payments': { kind: 'node', argv: ['scripts/ct-api.js', '--b2c-payment'],  needsOrder: true, label: 'Ver pagos de orden' },
   'order-messages': { kind: 'node', argv: ['scripts/ct-api.js', '--b2c-messages'], needsOrder: true, label: 'Ver historial de orden' },
   'move-state':     { kind: 'node', argv: ['scripts/ct-api.js'], needsOrder: true, needsState: true, label: 'Mover estado de orden' },
+  // Auto-actualización del panel: git pull → npm install (dos pasos).
+  'self-update':    { kind: 'update', label: 'Actualizar panel' },
 };
 
 const isOrder = (s) => typeof s === 'string' && /^[A-Za-z0-9]{5,24}$/.test(s);
@@ -201,6 +203,19 @@ function buildCommand(action, { order, stateValue, headed, tipo, pago, area, env
     return { cmd: 'node', args: argv, env: penv, base, shell: false, pretty: `node ${argv.join(' ')}` };
   }
 
+  if (a.kind === 'update') {
+    // Dos pasos secuenciales: git pull para bajar cambios, npm install para instalar.
+    // El segundo solo se ejecuta si el primero sale con código 0.
+    return {
+      chain: [
+        { cmd: 'git', args: ['pull'], label: 'Paso 1/2: Bajando última versión (git pull)…' },
+        { cmd: 'npm', args: ['install'], label: 'Paso 2/2: Instalando dependencias (npm install)…' },
+      ],
+      env: penv, base, shell: false,
+      pretty: 'git pull → npm install  (auto-actualización)',
+    };
+  }
+
   // Playwright. Reporter propio (@@DASH) para la lista en vivo + `list` para el log.
   // DASH_EVIDENCE activa el hook afterEach de _helpers → captura organizada en
   // evidencias/panel/<area>/. Solo en corridas del panel (CLI no paga el costo).
@@ -230,6 +245,8 @@ function buildCommand(action, { order, stateValue, headed, tipo, pago, area, env
 }
 
 // ─── SSE: corre el comando y transmite su salida línea por línea ──────────────
+// Soporta `built.chain`: array de {cmd, args, label} que se ejecutan en secuencia;
+// cada paso solo arranca si el anterior terminó con código 0.
 function streamRun(req, res, params) {
   let built;
   try { built = buildCommand(params.action, params); }
@@ -240,6 +257,60 @@ function streamRun(req, res, params) {
   });
   const send = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   send('meta', { pretty: built.pretty, headed: params.headed, base: built.base });
+
+  // Si hay chain, ejecutar pasos secuenciales.
+  if (built.chain && built.chain.length) {
+    let stepIdx = 0;
+    let tail = '';
+    let firstCode = 0;
+    function runStep() {
+      const step = built.chain[stepIdx];
+      if (!step) {
+        // Todos los pasos terminaron.
+        const summary = { passed: firstCode === 0 ? 1 : 0, failed: firstCode !== 0 ? 1 : 0, skipped: 0 };
+        send('done', { code: firstCode, summary });
+        res.end();
+        return;
+      }
+      send('line', { stream: 'out', text: step.label });
+      const child = spawn(step.cmd, step.args, { cwd: ROOT, env: built.env, shell: built.shell || false });
+      let buf = { out: '', err: '' };
+      const pump = (chunk, key) => {
+        const s = chunk.toString();
+        tail = (tail + s).slice(-6000);
+        buf[key] += s;
+        const lines = buf[key].split('\n');
+        buf[key] = lines.pop();
+        for (const line of lines) send('line', { stream: key, text: line });
+      };
+      child.stdout.on('data', (c) => pump(c, 'out'));
+      child.stderr.on('data', (c) => pump(c, 'err'));
+      child.on('close', (code) => {
+        if (buf.out) send('line', { stream: 'out', text: buf.out });
+        if (buf.err) send('line', { stream: 'err', text: buf.err });
+        if (code !== 0) {
+          // Falló este paso: no seguir.
+          if (firstCode === 0) firstCode = code;
+          const summary = { passed: 0, failed: 1, skipped: 0 };
+          send('done', { code: firstCode, summary });
+          res.end();
+          return;
+        }
+        stepIdx++;
+        runStep();
+      });
+      child.on('error', (e) => {
+        send('line', { stream: 'err', text: `error al ejecutar: ${e.message}` });
+        if (firstCode === 0) firstCode = 1;
+        const summary = { passed: 0, failed: 1, skipped: 0 };
+        send('done', { code: firstCode, summary });
+        res.end();
+      });
+      req.on('close', () => { try { child.kill(); } catch (_) {} });
+    }
+    runStep();
+    return;
+  }
 
   const child = spawn(built.cmd, built.args, { cwd: ROOT, env: built.env, shell: built.shell });
   let buf = { out: '', err: '' };
@@ -343,10 +414,45 @@ function listEvidencias() {
 }
 
 // ─── HTTP server ──────────────────────────────────────────────────────────────
+// BOOT_ID identifica ESTA instancia del server. El cliente lo escucha por SSE
+// (/live): si cambia, es que el server reinició (nuevo código) → recarga sola la
+// página. Así editar dashboard.js o pulsar Actualizar/Reiniciar refresca el panel
+// sin tocar la terminal ni F5 a mano.
+const BOOT_ID = String(Date.now());
+
 const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, `http://${HOST}:${PORT}`);
 
   if (u.pathname === '/') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(PAGE); return; }
+
+  // Live-reload: SSE que emite el BOOT_ID y un latido. Al reiniciar el server la
+  // conexión cae, el navegador reconecta, recibe un BOOT_ID distinto y recarga.
+  if (u.pathname === '/live') {
+    res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
+    res.write('retry: 1000\n');
+    res.write(`data: ${BOOT_ID}\n\n`);
+    const hb = setInterval(() => { try { res.write(': hb\n\n'); } catch (_) { /* cerrado */ } }, 20000);
+    req.on('close', () => clearInterval(hb));
+    return;
+  }
+
+  // Reinicio controlado: re-lanza el mismo proceso (detached) y sale. El relevo
+  // reintenta el bind hasta que se libera el puerto (ver handler EADDRINUSE).
+  if (u.pathname === '/restart' && req.method === 'POST') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end('{"ok":true}');
+    console.log('\n  ↻ Reiniciando el panel…\n');
+    setTimeout(() => {
+      try {
+        const child = spawn(process.execPath, process.argv.slice(1),
+          { cwd: process.cwd(), env: { ...process.env, DASH_CHILD: '1' }, detached: true, stdio: 'inherit' });
+        child.unref();
+      } catch (e) { console.error(`  ✗ No se pudo relanzar: ${e.message}`); }
+      server.close(() => process.exit(0));
+      setTimeout(() => process.exit(0), 1200);
+    }, 200);
+    return;
+  }
 
   if (u.pathname === '/config') {
     const envValues = {};
@@ -428,7 +534,15 @@ const server = http.createServer(async (req, res) => {
   res.writeHead(404); res.end('not found');
 });
 
+// Reintenta el bind ante EADDRINUSE: durante un /restart el proceso saliente aún
+// retiene el puerto unos ms → el relevo espera (hasta ~6s) en vez de morir.
+let bindTries = 0;
 server.on('error', (e) => {
+  if (e.code === 'EADDRINUSE' && bindTries < 15) {
+    bindTries++;
+    setTimeout(() => server.listen(PORT, HOST), 400);
+    return;
+  }
   if (e.code === 'EADDRINUSE') {
     console.error(`\n  ✗ El puerto ${PORT} ya está en uso. Quizá el panel ya está corriendo.`);
     console.error(`    Abre http://${HOST}:${PORT}  ·  o usa otro puerto:  DASH_PORT=4600 npm run dashboard\n`);
@@ -441,6 +555,14 @@ server.on('error', (e) => {
 server.listen(PORT, HOST, () => {
   console.log(`\n  Panel QA B2C  →  http://${HOST}:${PORT}`);
   console.log(`  Ambiente: QA (${BASE_QA})  ·  IMAP: Modo ${imapMode()}\n`);
+  // Abre el navegador en el PRIMER arranque (no en reinicios: la pestaña ya abierta
+  // se recarga sola por live-reload). Opt-out con DASH_NO_OPEN=1.
+  if (!process.env.DASH_CHILD && !process.env.DASH_NO_OPEN) {
+    const url = `http://${HOST}:${PORT}`;
+    const [cmd, args] = process.platform === 'win32' ? ['cmd', ['/c', 'start', '', url]]
+      : process.platform === 'darwin' ? ['open', [url]] : ['xdg-open', [url]];
+    try { spawn(cmd, args, { detached: true, stdio: 'ignore' }).unref(); } catch (_) { /* sin navegador: no pasa nada */ }
+  }
 });
 
 // ─── Página (HTML+CSS+JS inline) ─────────────────────────────────────────────
@@ -504,6 +626,7 @@ const PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8">
    display:grid;place-items:center;cursor:pointer;transition:.14s}
  .iconbtn:hover{border-color:#bfe0f4;color:var(--rotd);background:#f5fbff}
  .iconbtn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+ .iconbtn.spin svg{animation:spin .7s linear infinite}
 
  .prodwarn{display:flex;align-items:center;gap:9px;justify-content:center;padding:9px 26px;font-size:13px;font-weight:600;
    color:#7f1d1d;background:var(--errbg);border-bottom:1px solid var(--errln)}
@@ -810,7 +933,10 @@ const PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8">
   <select id="env" aria-label="Ambiente"><option value="qa">Entorno QA</option><option value="prod">PRODUCCIÓN</option></select>
  </label>
  <label class="toggle"><input type="checkbox" id="headed"><span class="track"></span>Ver navegador</label>
- <button class="iconbtn" id="btnSettings" title="Ajustes" aria-label="Ajustes"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+  <button class="iconbtn" id="btnSettings" title="Ajustes" aria-label="Ajustes"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+  <button class="iconbtn" id="btnUpdate" title="Actualizar panel (git pull + npm install)" aria-label="Actualizar panel" data-action="self-update" data-st="st-update" data-live="live-update" data-log="log-update" data-flow="actualizar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
+  <span class="pill" id="st-update" style="margin-left:-4px"><span class="d"></span>actualizado</span>
+  <button class="iconbtn" id="btnRestart" title="Reiniciar el panel (recarga el código del servidor)" aria-label="Reiniciar el panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg></button>
 </header>
 <div class="prodwarn" id="prodwarn" hidden>
  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
@@ -824,6 +950,9 @@ const PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8">
  <button class="lb-jump" id="lbJump" type="button">ver detalle ↓</button>
  <button class="lb-cancel" id="lbCancel" type="button" style="display:none">Cancelar</button>
 </div>
+<div class="live" id="live-update"></div>
+<button class="detalle" data-target="log-update" style="display:none;margin:8px 26px 0">ver detalle de actualización <span class="ar">▾</span></button>
+<pre class="log" id="log-update" style="display:none;margin:0 26px 8px"></pre>
 
 <main>
  <section class="master" id="master">
@@ -1229,19 +1358,35 @@ function liveDone(liveEl,state,msg){
  if(b&&!b.hasAttribute('hidden')){b.className='livebar is-'+state;syncLivebar(liveEl);var sp2=b.querySelector('.lb-spin');if(sp2)sp2.textContent={ok:'✓',err:'✗',skip:'!'}[state]||'';byId('lbNow').textContent=msg||{ok:'Listo',err:'Falló',skip:'Omitido'}[state];if(_lbHideT)clearTimeout(_lbHideT);_lbHideT=setTimeout(hideLivebar,4000);}
 }
 function triage(action,log){
- var fails=[],re=/[✘✗×]\\s+\\d+\\s+.*?›\\s*([^\\n]+)/g,m;
- while((m=re.exec(log)))fails.push(m[1].replace(/\\(\\d+(\\.\\d+)?(ms|s)\\)\\s*$/,'').trim());
- var causa,pista,clase='regresion';
- if(/expected.*200|toBe\\(200\\)|net::ERR|ECONNREFUSED|response.*(4\\d\\d|5\\d\\d)/i.test(log)){
-  causa='Ambiente: una URL no respondió 200.';clase='ambiente';pista='Suele ser un deploy a medias o infra caída, NO el sitio roto por dentro. Reintenta; si persiste, avisa a dev/infra.';
- }else if(/@content|renderiza contenido real/i.test(log)){
-  causa='La página dio 200 pero no renderizó (faltó title o header).';clase='render';pista='Render roto REAL — title/header son lo más estable que hay. Revisa la hidratación (Qwik) de esa URL.';
- }else if(/Timed out.*(toBeVisible|toBeAttached|toBeEnabled)|waiting for|getByRole|getByText|locator\\(/i.test(log)){
-  causa='Un elemento crítico esperado no apareció.';clase='regresion';pista='Los selectores son estables por diseño (rol/texto/href). Lo más probable es REGRESIÓN real. Si el cambio fue a propósito, actualiza el contract y haz commit.';
- }else if(/unexpected.*pass|expected to fail|fixme/i.test(log)){
-  causa='Un bug conocido cambió de estado.';clase='baseline';pista='Si un test "bug conocido" PASÓ, el bug se arregló → ciérralo en el inventario.';
- }else{causa='Falló una verificación.';clase='otro';pista='Abre el detalle técnico para ver el error exacto.';}
- return {fails:fails,causa:causa,pista:pista,clase:clase};
+  var fails=[],re=/[✘✗×]\\s+\\d+\\s+.*?›\\s*([^\\n]+)/g,m;
+  while((m=re.exec(log)))fails.push(m[1].replace(/\\(\\d+(\\.\\d+)?(ms|s)\\)\\s*$/,'').trim());
+  var causa,pista,clase='regresion';
+  if(/expected.*200|toBe\\(200\\)|net::ERR|ECONNREFUSED|response.*(4\\d\\d|5\\d\\d)/i.test(log)){
+   causa='Ambiente: una URL no respondió 200.';clase='ambiente';pista='Suele ser un deploy a medias o infra caída, NO el sitio roto por dentro. Reintenta; si persiste, avisa a dev/infra.';
+  }else if(/@content|renderiza contenido real/i.test(log)){
+   causa='La página dio 200 pero no renderizó (faltó title o header).';clase='render';pista='Render roto REAL — title/header son lo más estable que hay. Revisa la hidratación (Qwik) de esa URL.';
+  }else if(/Timed out.*(toBeVisible|toBeAttached|toBeEnabled)|waiting for|getByRole|getByText|locator\\(/i.test(log)){
+   causa='Un elemento crítico esperado no apareció.';clase='regresion';pista='Los selectores son estables por diseño (rol/texto/href). Lo más probable es REGRESIÓN real. Si el cambio fue a propósito, actualiza el contract y haz commit.';
+  }else if(/unexpected.*pass|expected to fail|fixme/i.test(log)){
+   causa='Un bug conocido cambió de estado.';clase='baseline';pista='Si un test "bug conocido" PASÓ, el bug se arregló → ciérralo en el inventario.';
+  }else{causa='Falló una verificación.';clase='otro';pista='Abre el detalle técnico para ver el error exacto.';}
+  return {fails:fails,causa:causa,pista:pista,clase:clase};
+}
+// Triage amigable para self-update: traduce errores de git/npm a lenguaje QA.
+function selfUpdateTriage(log){
+  var causa,pista,clase='otro';
+  if(/fatal:.*not a git repository/i.test(log)){
+   causa='Esta carpeta no es un repositorio git.';clase='ambiente';pista='El panel se instaló copiando archivos en vez de usar git clone. Reinstálalo siguiendo la guía (git clone …).';
+  }else if(/Could not resolve host|unable to access|Failed to connect|network|timeout|ETIMEDOUT|ECONNREFUSED|ENOTFOUND/i.test(log)){
+   causa='No hay conexión a internet o GitHub no responde.';clase='ambiente';pista='Revisa tu conexión a internet y vuelve a intentar. Si tienes VPN, asegúrate de que esté activa. Si el problema sigue, GitHub puede estar caído — espera unos minutos.';
+  }else if(/Please commit your changes|Your local changes|merge conflict|CONFLICT/i.test(log)){
+   causa='Hay cambios locales que chocan con la actualización.';clase='conflicto';pista='Algún archivo del panel se modificó localmente. Resuélvelo con git (guarda o descarta esos cambios) y reintenta. El panel sigue funcionando con la versión actual.';
+  }else if(/Permission denied|could not lock/i.test(log)){
+   causa='Otro programa está usando los archivos del panel.';clase='bloqueo';pista='Cierra otras terminales, editores (VS Code) o ventanas que tengan abierta esta carpeta. Luego vuelve a intentar.';
+  }else if(/npm ERR|npm install.*failed/i.test(log)){
+   causa='npm install falló al instalar dependencias.';clase='instalacion';pista='Puede ser falta de espacio en disco, problema de red con el registro npm, o una dependencia rota. Reintenta; si persiste, abre el detalle del error abajo.';
+  }else{causa='La actualización falló por un problema inesperado.';pista='Abre "ver detalle de actualización" abajo para ver el error exacto.';}
+  return {fails:[],causa:causa,pista:pista,clase:clase};
 }
 function liveTriage(liveEl,t,skipped,why){
  if(!liveEl)return;
@@ -1295,16 +1440,30 @@ function startRun(cfg){
   var mo=d.text.match(/CAPA2_ORDER=([A-Za-z0-9]{5,24})/)||d.text.match(/orden creada:\\s*([A-Za-z0-9]{5,24})/i);
   if(mo)capturedOrder=mo[1];
  });
- es.addEventListener('done',function(e){
-  var d=JSON.parse(e.data);timerStop(liveEl);var state=veredicto(d);
-  if(cfg.isMaster){/* el master agrega su propio veredicto al final */}
-  else setPill(stEl,state);
-  liveDone(liveEl,state,veredictoMsg(cfg.flow,state,d));
-  if(state==='err'){
-   var tr=triage(cfg.action,runLog);
-   if(liveEl&&liveEl._mode==='tests'&&liveEl._rows){var rf=Object.keys(liveEl._rows).map(function(k){return liveEl._rows[k];}).filter(function(r){return r.st==='fail';});if(rf.length)tr.fails=rf.slice(0,4).map(function(r){var h=humanTitle(r.o);return (h.suite?h.suite+' › ':'')+h.title;});}
-   liveTriage(liveEl,tr,0);
-  }else if(state==='skip')liveTriage(liveEl,null,(d.summary&&d.summary.skipped)||1,cfg.auth?'auth':'');
+  es.addEventListener('done',function(e){
+   var d=JSON.parse(e.data);timerStop(liveEl);var state=veredicto(d);
+   if(cfg.isMaster){/* el master agrega su propio veredicto al final */}
+   else setPill(stEl,state);
+   liveDone(liveEl,state,veredictoMsg(cfg.flow,state,d));
+   // ── Self-update: triage amigable para QA no técnico ──────────────
+   if(cfg.action==='self-update'){
+     if(state==='err'){
+       var tr2=selfUpdateTriage(runLog);
+       liveTriage(liveEl,tr2,0);
+     }
+     // Siempre mostrar el detalle y log tras un update (éxito o fallo).
+     var dt=byId('detalle-update')||document.querySelector('.detalle[data-target="log-update"]');
+     var lg=byId('log-update');
+     if(dt)dt.style.display=''; if(lg)lg.style.display='';
+     // Éxito → reinicia el server para cargar el código recién bajado. El
+     // live-reload recarga la página sola. Vero no toca la terminal.
+     if(state!=='err'){liveDone(liveEl,state,'Actualizado. Reiniciando el panel para aplicar los cambios…');setTimeout(restartPanel,1000);}
+   }
+   if(state==='err'&&cfg.action!=='self-update'){
+    var tr=triage(cfg.action,runLog);
+    if(liveEl&&liveEl._mode==='tests'&&liveEl._rows){var rf=Object.keys(liveEl._rows).map(function(k){return liveEl._rows[k];}).filter(function(r){return r.st==='fail';});if(rf.length)tr.fails=rf.slice(0,4).map(function(r){var h=humanTitle(r.o);return (h.suite?h.suite+' › ':'')+h.title;});}
+    liveTriage(liveEl,tr,0);
+   }else if(state==='skip')liveTriage(liveEl,null,(d.summary&&d.summary.skipped)||1,cfg.auth?'auth':'');
   if(cfg.action==='crear-orden'&&capturedOrder&&state!=='err')showOrder(capturedOrder,true);
   byId('lastRun').textContent=' · Última: '+new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
   recordRun(cfg.action,state,d.summary,{stId:cfg.stId,label:cfg.label||ACT_LABEL[cfg.action]||cfg.action});
@@ -1320,10 +1479,11 @@ function startRun(cfg){
  };
 }
 function veredictoMsg(flow,state,d){
- if(state==='skip')return'Se omitió: nada verificado';
- if(state==='err')return'Algo falló — mira el detalle';
- if(flow==='orden'||flow==='capa2')return'¡Listo! Flujo completado como un usuario real';
- return'Todo en pie';
+  if(state==='skip')return'Se omitió: nada verificado';
+  if(state==='err')return'Algo falló — mira el detalle';
+  if(flow==='orden'||flow==='capa2')return'¡Listo! Flujo completado como un usuario real';
+  if(flow==='actualizar')return'Panel actualizado. Si ves cosas raras, recarga la página (F5).';
+  return'Todo en pie';
 }
 // Expande la sección que contiene el panel en vivo de una corrida → su resultado
 // nunca queda oculto bajo una sección colapsada (las secciones arrancan colapsadas).
@@ -1664,6 +1824,30 @@ function closeModal(){byId('modal').classList.remove('show');if(!byId('drawer').
 byId('btnSettings').addEventListener('click',openModal);
 byId('modalClose').addEventListener('click',closeModal);
 document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeDrawer();closeModal();}});
+
+// ─── Reinicio del panel + live-reload ───────────────────────────────────────────
+// restartPanel(): pide al server re-ejecutarse. El live-reload recarga la página
+// sola cuando el nuevo server está arriba (BOOT_ID distinto) → ves el código nuevo
+// sin F5 ni tocar la terminal. Lo usa el botón Reiniciar y el final de Actualizar.
+var _restarting=false;
+function restartPanel(){
+ if(_restarting)return; _restarting=true;
+ var b=byId('btnRestart'); if(b)b.classList.add('spin');
+ fetch('/restart',{method:'POST'}).catch(function(){/* el server cae al reiniciar: esperado */});
+ setTimeout(function(){location.reload();},8000); // red de seguridad si el live-reload no dispara
+}
+byId('btnRestart').addEventListener('click',restartPanel);
+
+// Live-reload: escucha el BOOT_ID del server por SSE. Si cambia (server reinició),
+// recarga la página. EventSource reconecta solo tras la caída del reinicio.
+(function(){
+ var boot=null;
+ var es=new EventSource('/live');
+ es.onmessage=function(e){
+  var id=(e.data||'').trim(); if(!id)return;
+  if(boot===null){boot=id;} else if(id!==boot){location.reload();}
+ };
+})();
 
 function buildConfig(groups,values){
  var host=byId('cfgGroups');if(!host)return;host.innerHTML='';

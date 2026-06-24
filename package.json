@@ -6,6 +6,7 @@
   "scripts": {
     "postinstall": "playwright install chromium",
     "dashboard": "node scripts/dashboard.js",
+    "dashboard:dev": "node --watch scripts/dashboard.js",
     "check:b2c": "npx playwright test --project=b2c-contracts --grep-invert \"@capa2|@smoke|@perf\"",
     "check:b2c:health": "npx playwright test --project=b2c-contracts --grep @health",
     "check:b2c:contracts": "npx playwright test --project=b2c-contracts --grep @contract",
