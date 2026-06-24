@@ -120,15 +120,26 @@ const HEALTH_URLS = [
   // renderiza" la da ahora `1-catalog.contract.spec.js` DINÁMICAMENTE (primer producto de
   // la categoría, sin SKU fijo). El único punto con SKU fijo es `1-pdp` (deliberado: la
   // cobertura sembrada por CP lo hace determinista para asertar precio + botón habilitado).
-  // Servicios (landing del servicio comprable — llena la celda Responde de Servicios)
+  // Servicios — hub + landing del servicio comprable (ambos llenan Responde de Servicios)
+  { nombre: 'Servicios — hub', url: abs('/servicios/'), area: AREA.SERVICIOS },
   { nombre: 'Servicios — Lavado', url: abs('/servicios-lavado/'), area: AREA.SERVICIOS },
-  // Compra (ruta transaccional)
+  // Compra (ruta transaccional + post-venta). Seguimiento es ANÓNIMO (sin auth): se
+  // entra con número de pedido. Vive en Compra (post-venta), NO en Mi cuenta (auth).
   { nombre: 'Carrito', url: abs('/cart/'), area: AREA.COMPRA },
   { nombre: 'Checkout paso 1', url: abs('/checkout/1/'), area: AREA.COMPRA },
-  // Mi cuenta (seguimiento de pedido)
-  { nombre: 'Seguimiento de pedido', url: abs('/traking/'), area: AREA.CUENTA },   // /tracking/ da error (BUG-097)
-  // Institucional
+  { nombre: 'Seguimiento de pedido', url: abs('/traking/'), area: AREA.COMPRA },   // /tracking/ da error (BUG-097)
+  // Institucional / Contenido — toda página que el área posee tiene su check 200
+  // (simetría con Estructura: antes solo /contacto/ estaba aquí → FAQ/distribuidores/
+  // legales podían dar 404 tras un deploy y Responde seguía verde).
   { nombre: 'Contacto', url: abs('/contacto/'), area: AREA.INSTITUCIONAL },
+  { nombre: 'Preguntas frecuentes', url: abs('/preguntas-frecuentes/'), area: AREA.INSTITUCIONAL },
+  { nombre: 'Distribuidores', url: abs('/distribuidores/'), area: AREA.INSTITUCIONAL },
+  { nombre: 'Aviso de privacidad', url: abs('/aviso-de-privacidad/'), area: AREA.INSTITUCIONAL },
+  { nombre: 'Seguridad de la información', url: abs('/seguridad-de-la-informacion/'), area: AREA.INSTITUCIONAL },
+  // Contenido editorial/corporativo (adoptado por Institucional — auditoría taxonomía s29).
+  { nombre: 'Nosotros', url: abs('/nosotros/'), area: AREA.INSTITUCIONAL },
+  { nombre: 'Blog', url: abs('/blog/'), area: AREA.INSTITUCIONAL },
+  { nombre: 'Recursos', url: abs('/recursos/'), area: AREA.INSTITUCIONAL },
 ];
 
 // Vista de HEALTH_URLS recortada por área. El panel corre "Responde" de un área

@@ -108,14 +108,15 @@ PAYMENT_STATES.forEach(s  => STATE_MAP[`pay:${s}`]   = { flag: '--b2c-set-paymen
 //   flujo    : acción mutante de su "Flujo" (null = ⏳ pendiente)
 //   lock     : true → área con flujo mutante (candado 🔒)
 //   auth     : la corrida necesita sesión B2C (si falta → skip ámbar, no rojo)
+//   movil    : patrón --grep de los tests @mobile del área en `5-mobile` (null = ⏳ parqueado)
 const AREAS = {
-  cascaron:      { label: 'Header y Footer',         lock: false, responde: false, files: ['1-global-layout'], flujo: null },
-  home:          { label: 'Home',                    lock: false, responde: true,  files: ['1-home'], flujo: null },
-  pdp:           { label: 'Catálogo / PDP',          lock: false, responde: true,  files: ['1-pdp', '1-catalog'], flujo: 'pdp-flujo', flujoLabel: 'Galería · acordeones · compra por CP' },
-  servicios:     { label: 'Servicios',               lock: false, responde: true,  files: ['1-servicios', '1-servicio-lavado'], flujo: null },
-  institucional: { label: 'Institucional',           lock: false, responde: true,  files: ['1-contacto', '1-faq', '1-distribuidores', '1-legales'], flujo: null },
-  compra:        { label: 'Compra (carrito → pago)', lock: true,  responde: true,  files: ['2-cart-empty', '2-money-path'], auth: true, flujo: 'purchase',    flujoLabel: 'Compra E2E → nº de orden' },
-  cuenta:        { label: 'Mi cuenta',               lock: true,  responde: true,  files: ['2-customer', '2-pci-baseline'], auth: true, flujo: 'login-check', flujoLabel: 'Login → sesión' },
+  cascaron:      { label: 'Header y Footer',         desc: 'El cascarón global: header, nav, buscador y footer + sus enlaces en toda página', lock: false, responde: false, files: ['1-global-layout'], flujo: 'header-flujo', flujoLabel: 'Buscador → resultados (SRP)', movil: 'Cascarón en 375', movilLabel: 'Footer global 375px · sin overflow' },
+  home:          { label: 'Home',                    desc: 'La portada: carrusel, categorías y el selector "¿qué necesitas solucionar?"', lock: false, responde: true,  files: ['1-home'], flujo: 'home-flujo', flujoLabel: 'Selector de soluciones → categoría', movil: 'Home: header|Hamburguesa abre', movilLabel: 'Header + hamburguesa abre menú · sin overflow' },
+  pdp:           { label: 'Catálogo / PDP',          desc: 'Catálogo y ficha de producto: listados, galería, acordeones y compra por CP', lock: false, responde: true,  files: ['1-pdp', '1-catalog'], flujo: 'pdp-flujo', flujoLabel: 'Galería · acordeones · compra por CP', movil: 'PDP en 375px|Catálogo en 375px', movilLabel: 'PDP + catálogo a 375px · sin overflow' },
+  servicios:     { label: 'Servicios',               desc: 'Servicio de lavado de tinaco: landing y cotización del wizard', lock: false, responde: true,  files: ['1-servicios', '1-servicio-lavado'], flujo: 'servicios-flujo', flujoLabel: 'Cotización → carrito', movil: 'Servicios en 375', movilLabel: 'Landing 375px · sin overflow' },
+  institucional: { label: 'Institucional / Contenido', desc: 'Contacto, FAQ, distribuidores, legales + contenido editorial: Nosotros, Blog, Recursos', lock: false, responde: true,  files: ['1-contacto', '1-faq', '1-distribuidores', '1-legales', '1-contenido'], flujo: 'institucional-flujo', flujoLabel: 'Contacto valida submit', movil: 'Institucional en 375', movilLabel: 'Contacto 375px · sin overflow' },
+  compra:        { label: 'Compra (carrito → pago)', desc: 'La ruta del dinero: carrito → checkout → pago + post-venta (seguimiento anónimo). Genera orden real, QA-only', lock: true,  responde: true,  files: ['2-cart-empty', '2-money-path', '2-seguimiento'], auth: true, flujo: 'purchase',    flujoLabel: 'Compra E2E → nº de orden', movil: 'Compra en 375', movilLabel: 'Carrito 375px · sin overflow' },
+  cuenta:        { label: 'Mi cuenta',               desc: 'Acceso y área de cliente: login, registro y /customer (datos, pedidos, direcciones)', lock: true,  responde: true,  files: ['2-customer', '2-pci-baseline', '1-forms'], auth: true, flujo: 'login-check', flujoLabel: 'Login → sesión', movil: 'Mi cuenta en 375', movilLabel: 'Customer 375px @auth · sin overflow' },
 };
 const AREA_ORDER = ['cascaron', 'home', 'pdp', 'servicios', 'institucional', 'compra', 'cuenta'];
 const areaSpecPath = (f) => `tests/${f}.contract.spec.js`;
@@ -128,17 +129,29 @@ const ACTIONS = {
   'area-responde':  { kind: 'pw', grep: ['--grep', '@health|@content'], usesBrowser: true, needsArea: true, label: 'Responde (200 + render) por área' },
   // Estructura por área (DOM contracts de los specs del área).
   'area':           { kind: 'pw', needsArea: true, usesBrowser: true, label: 'Estructura crítica por área' },
+  // Móvil 375px por área (tests @mobile de `5-mobile`, recortados por el patrón AREAS[area].movil).
+  'area-movil':     { kind: 'pw', needsArea: true, usesBrowser: true, label: 'Móvil 375px por área' },
   // Flujos mutantes (efecto real) — QA-only.
   'purchase':       { kind: 'pw', grep: ['--grep', '@purchase'], usesBrowser: true, label: 'Compra E2E → nº de orden (QA)' },
   'login-check':    { kind: 'pw', grep: ['--grep', '@login'],    usesBrowser: true, label: 'Login → sesión (QA)' },
   'forms-email':    { kind: 'pw', grep: ['--grep', '@email'],    usesBrowser: true, label: 'Forms + correo (forgot reset)' },
   // Calidad transversal (site-wide): excepciones JS no capturadas + 404/catchall.
   'xcut':           { kind: 'pw', grep: ['--grep', '@xcut'],     usesBrowser: true, label: 'Errores y enlaces (transversal)' },
+  // Calidad transversal · Performance: Lighthouse / Core Web Vitals (Home, PDP). Lento (~1 min).
+  'perf':           { kind: 'pw', grep: ['--grep', '@perf'],     usesBrowser: true, label: 'Performance (Lighthouse)' },
+  // Calidad transversal · Centinelas de bloqueos externos (vigilan que sigan rotos;
+  // se ponen verdes solos al arreglarse). Ver 9-centinelas.
+  'bloqueos':       { kind: 'pw', grep: ['--grep', '@bloqueo'],  usesBrowser: true, label: 'Bloqueos externos (centinelas)' },
   // Flujo N1 de Catálogo/PDP (lectura, no muta): galería · acordeones · compra por CP.
   'pdp-flujo':      { kind: 'pw', grep: ['--grep', '@flujo'],    usesBrowser: true, label: 'Catálogo/PDP a fondo (N1)' },
+  // Flujos de área (lectura, no mutan) — tags POR ÁREA (sin substring "@flujo" para no mezclar).
+  'header-flujo':        { kind: 'pw', grep: ['--grep', '@flheader'], usesBrowser: true, label: 'Header — buscador → SRP' },
+  'home-flujo':          { kind: 'pw', grep: ['--grep', '@flhome'],   usesBrowser: true, label: 'Home — selector de soluciones' },
+  'institucional-flujo': { kind: 'pw', grep: ['--grep', '@flinst'],   usesBrowser: true, label: 'Institucional — contacto valida' },
+  'servicios-flujo':     { kind: 'pw', grep: ['--grep', '@flserv'],   usesBrowser: true, label: 'Servicios — cotización → carrito' },
   // Lectura global (atajo): todo lo no-mutante. La acción maestra del panel
   // secuencia por celda; esta queda como respaldo de "una sola corrida".
-  'check-all':      { kind: 'pw', grep: ['--grep-invert', '@capa2|@smoke'], usesBrowser: true, label: 'Revisar sitio (lectura)' },
+  'check-all':      { kind: 'pw', grep: ['--grep-invert', '@capa2|@smoke|@perf'], usesBrowser: true, label: 'Revisar sitio (lectura)' },
   // Utilidades.
   'check-imap':     { kind: 'node', argv: ['scripts/check-imap.js'], label: 'Verificar IMAP' },
   'gen-auth-b2c':   { kind: 'node', argv: ['setup-auth-b2c.js'], usesBrowser: true, label: 'Generar sesión B2C (login)' },
@@ -194,11 +207,18 @@ function buildCommand(action, { order, stateValue, headed, tipo, pago, area, env
   penv.DASH_EVIDENCE = '1';
   const args = ['playwright', 'test', '--project=b2c-contracts',
     '--reporter=./scripts/dash-reporter.js,list'];
-  const q = (v) => (/[|&()<>^]/.test(v) ? `"${v}"` : v);
+  // Cita el valor si tiene metacaracteres de shell O espacios (shell:true parte por espacios).
+  const q = (v) => (/[|&()<>^ ]/.test(v) ? `"${v}"` : v);
   if (action === 'area') {
     // Estructura: filtra por archivo(s) del área + solo @contract dentro de ellos.
     AREAS[area].files.forEach((f) => args.push(areaSpecPath(f)));
     args.push('--grep', '@contract');
+  } else if (action === 'area-movil') {
+    // Móvil: corre SOLO el spec 5-mobile, recortado a los tests del área por título.
+    const pat = AREAS[area].movil;
+    if (!pat) throw new Error('área sin cobertura móvil');
+    args.push(areaSpecPath('5-mobile'));
+    args.push('--grep', q(pat));
   } else if (action === 'area-responde') {
     // Responde: @health|@content; el filtrado por área lo hace DASH_AREA en el spec.
     a.grep.forEach((v) => args.push(q(v)));
@@ -338,9 +358,10 @@ const server = http.createServer(async (req, res) => {
       prodBlocked: [...PROD_BLOCKED],
       envFields: ENV_FIELDS, envValues,
       areas: AREA_ORDER.map((k) => ({
-        key: k, label: AREAS[k].label, lock: !!AREAS[k].lock, auth: !!AREAS[k].auth,
+        key: k, label: AREAS[k].label, desc: AREAS[k].desc || null, lock: !!AREAS[k].lock, auth: !!AREAS[k].auth,
         responde: !!AREAS[k].responde, respondeCount: respondeCount(k),
         files: AREAS[k].files, flujo: AREAS[k].flujo || null, flujoLabel: AREAS[k].flujoLabel || null,
+        movil: AREAS[k].movil || null, movilLabel: AREAS[k].movilLabel || null,
       })),
       states: Object.entries(STATE_MAP).map(([v, m]) => ({ value: v, label: m.label })),
     }));
@@ -515,6 +536,8 @@ const PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8">
  .livebar.is-ok .lb-counts{color:var(--ok)} .livebar.is-err .lb-counts{color:var(--err)} .livebar.is-skip .lb-counts{color:var(--warn)}
  .livebar .lb-jump{margin-left:auto;flex:none;font:600 12px 'IBM Plex Sans',sans-serif;color:var(--rotd);background:#fff;border:1px solid #bfe0f4;border-radius:8px;padding:5px 11px;cursor:pointer;transition:.14s;white-space:nowrap}
  .livebar .lb-jump:hover{background:var(--rot);color:#fff;border-color:var(--rot)}
+ .livebar .lb-cancel{flex:none;font:600 12px 'IBM Plex Sans',sans-serif;color:var(--err);background:#fff;border:1px solid #f0c2c2;border-radius:8px;padding:5px 11px;cursor:pointer;transition:.14s;white-space:nowrap}
+ .livebar .lb-cancel:hover{background:var(--err);color:#fff;border-color:var(--err)}
 
  main{max-width:1140px;margin:0 auto;padding:24px 26px 60px}
  /* Cada sección es una TARJETA propia → colapsada se ve como una fila-tarjeta limpia
@@ -579,21 +602,23 @@ const PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8">
  .sc.pend{color:var(--pend)} .sc.pend .d{background:var(--pend)}
 
  /* Mapa por área */
- .maprow{background:#fbfdff;border:1px solid var(--line);border-radius:14px;margin-bottom:10px;overflow:hidden;transition:border-color .14s}
+ .maprow{background:#fbfdff;border:1px solid var(--line);border-radius:12px;margin-bottom:7px;overflow:hidden;transition:border-color .14s}
  .maprow:hover{border-color:#cfe3f2}
- .maprow-h{display:flex;align-items:center;gap:11px;padding:13px 16px}
- .maprow-h .anm{font-weight:700;font-size:14.5px;color:var(--ink);display:flex;align-items:center;gap:8px}
+ .maprow-h{display:flex;align-items:center;gap:9px;padding:9px 13px}
+ .maprow-h .anmwrap{display:flex;flex-direction:column;gap:1px;min-width:0}
+ .maprow-h .anm{font-weight:700;font-size:13.5px;color:var(--ink);display:flex;align-items:center;gap:7px}
+ .maprow-h .adesc{font-weight:400;font-size:11px;color:var(--mut);line-height:1.2}
  .maprow-h .lock{font-size:11px;opacity:.6}
  .maprow-h .sp{flex:1}
- .cells{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:0 16px 14px}
+ .cells{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0 13px 11px}
  @media(max-width:720px){.cells{grid-template-columns:repeat(2,1fr)}}
- .cell{display:flex;flex-direction:column;gap:6px;align-items:flex-start;text-align:left;padding:10px 11px;border:1px solid var(--line);
-   border-radius:11px;background:#fbfdff;cursor:pointer;font:inherit;color:var(--ink2);transition:.13s;min-height:64px}
+ .cell{display:flex;flex-direction:column;gap:4px;align-items:flex-start;text-align:left;padding:7px 9px;border:1px solid var(--line);
+   border-radius:9px;background:#fbfdff;cursor:pointer;font:inherit;color:var(--ink2);transition:.13s;min-height:50px}
  .cell:hover{border-color:#bfe0f4;background:#f5fbff;transform:translateY(-1px)}
  .cell[disabled]{cursor:default;opacity:1}
  .cell[disabled]:hover{transform:none;background:#fbfdff;border-color:var(--line)}
- .cell .cdim{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);font-weight:700}
- .cell .cval{font-size:12px;color:var(--ink2);font-weight:500;line-height:1.35}
+ .cell .cdim{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);font-weight:700}
+ .cell .cval{font-size:11.5px;color:var(--ink2);font-weight:500;line-height:1.3}
  .cell.is-run{border-color:#cbe6f7} .cell.is-ok{border-color:var(--okln)} .cell.is-err{border-color:var(--errln)}
  .cell.is-skip{border-color:var(--warnln)} .cell.is-pend{border-color:var(--pendln);background:var(--pendbg)}
  .cell.is-na{background:var(--line2);cursor:default;opacity:.7}
@@ -601,9 +626,9 @@ const PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8">
  .cell.is-flujolock{background:#fff7ef;border-color:#f1dcae}
 
  /* Pill (estado de celda) */
- .pill{font:600 11px 'IBM Plex Mono',monospace;display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;
+ .pill{font:600 10.5px 'IBM Plex Mono',monospace;display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;
    background:var(--line2);color:var(--mut);border:1px solid var(--line);white-space:nowrap}
- .pill .d{width:7px;height:7px;border-radius:50%;background:var(--idle);flex:none}
+ .pill .d{width:6px;height:6px;border-radius:50%;background:var(--idle);flex:none}
  .pill.is-run{background:#e3f1fb;color:var(--rotd);border-color:#cbe6f7} .pill.is-run .d{background:var(--rot);animation:pulse 1s infinite}
  .pill.is-ok{background:var(--okbg);color:var(--ok);border-color:var(--okln);animation:pop .32s ease} .pill.is-ok .d{background:var(--ok)}
  .pill.is-err{background:var(--errbg);color:var(--err);border-color:var(--errln);animation:pop .32s ease} .pill.is-err .d{background:var(--err)}
@@ -797,6 +822,7 @@ const PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8">
  <span class="lb-prog" id="lbProg" style="display:none">0/0</span>
  <span class="lb-counts" id="lbCounts" style="display:none">✓0 ✘0 –0</span>
  <button class="lb-jump" id="lbJump" type="button">ver detalle ↓</button>
+ <button class="lb-cancel" id="lbCancel" type="button" style="display:none">Cancelar</button>
 </div>
 
 <main>
@@ -826,6 +852,7 @@ const PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8">
    <span class="b">Bugs conocidos vigilados: 4</span> <span>(0 arreglados)</span>
    <span>· BUG-001 (Home sin H1) · BUG-015 (logo no &lt;a&gt;) · BUG-003 (Contacto→FAQ) · BUG-119 (PAN/PCI)</span>
    <a href="/report" target="_blank">reporte HTML ↗</a>
+   <a href="#" id="btnExportMd" title="Copia un resumen en Markdown para pegar en Jira/Slack">copiar resumen (Markdown) ⧉</a>
   </div>
   <div class="live" id="live-map" data-flow="checks"></div>
   <button class="detalle" data-target="log-map">ver detalle técnico <span class="ar">▾</span></button>
@@ -844,7 +871,10 @@ const PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8">
  <section class="block collapsed" id="xBlock">
   <div class="block-h" data-block="xBlock"><span class="cic"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg></span><h2>Calidad transversal</h2><span class="hint">site-wide — no cabe como columna del mapa</span><span class="block-chev"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span></div>
   <div class="xrow"><span class="pill" id="st-xcut"><span class="d"></span>—</span><span class="xnm"><b>Errores y enlaces</b><small>excepciones JS no capturadas (Home·Categoría·Contacto) · 404/catchall (BUG-518)</small></span><button class="btn-sec" data-action="xcut" data-st="st-xcut" data-live="live-xcut" data-log="log-xcut" data-flow="checks"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>correr</button></div>
-  <div class="xrow"><span class="pill is-pend"><span class="d"></span>⏳</span><span class="xnm"><b>Performance</b><small>Lighthouse / Core Web Vitals — Home, PDP · roadmap (ver tests/COBERTURA.md)</small></span></div>
+  <div class="xrow"><span class="pill" id="st-perf"><span class="d"></span>—</span><span class="xnm"><b>Performance</b><small>Lighthouse / Core Web Vitals — Home, PDP · lento (~1 min) · on-demand</small></span><button class="btn-sec" data-action="perf" data-st="st-perf" data-live="live-perf" data-log="log-perf" data-flow="checks"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>correr</button></div>
+  <div class="live" id="live-perf" data-flow="checks"></div>
+  <button class="detalle" data-target="log-perf">ver detalle técnico (Performance) <span class="ar">▾</span></button>
+  <pre class="log" id="log-perf"></pre>
   <div class="xrow"><span class="pill"><span class="d"></span>baseline</span><span class="xnm"><b>PCI</b><small>2-pci-baseline — guard de BUG-119 (PAN en detalle de pedido). Se vigila en Mi cuenta.</small></span></div>
   <div class="live" id="live-xcut" data-flow="checks"></div>
   <button class="detalle" data-target="log-xcut">ver detalle técnico <span class="ar">▾</span></button>
@@ -934,6 +964,8 @@ var $=function(s){return document.querySelector(s);};
 var byId=function(id){return document.getElementById(id);};
 var running=false;
 var ENV='qa';
+// Estado de la corrida activa (para Cancelar): el EventSource vivo, el pill en curso y su panel.
+var activeES=null,activeStId=null,activeLiveEl=null,cancelled=false,runStartedAt=0;
 var PROD_BLOCKED=['crear-orden','capa2-auto','purchase','login-check','move-state'];
 var AREAS=[];            // poblado desde /config
 var AREA_LABELS={};
@@ -981,7 +1013,33 @@ function setBusy(b){
  running=b; document.body.classList.toggle('busy',b);
  var btns=document.querySelectorAll('[data-action],[data-cell],#btnMaster,#invEmails,[data-inv]');
  for(var i=0;i<btns.length;i++)btns[i].disabled=b;
+ var cb=byId('lbCancel'); if(cb)cb.style.display=b?'':'none';
+ if(b){cancelled=false;runStartedAt=Date.now();ensureNotifyPerm();}  // nueva corrida
  if(!b&&ENV==='prod')applyEnv('prod');
+}
+// Notificación del navegador al terminar corridas LARGAS (≥25s, p.ej. compra E2E ~3 min).
+// Pide permiso la primera vez; degrada en silencio si no se concede.
+function ensureNotifyPerm(){try{if('Notification'in window&&Notification.permission==='default')Notification.requestPermission();}catch(_){}}
+function maybeNotify(label,state){
+ try{
+  if(!('Notification'in window)||Notification.permission!=='granted')return;
+  if(Date.now()-runStartedAt<25000)return;   // corridas cortas no molestan
+  var ic={ok:'✓',err:'✗',skip:'–'},body={ok:'Todo en pie',err:'Algo falló — revisa el panel',skip:'Omitido (revisa prerequisitos)'};
+  new Notification('Panel QA B2C — '+(ic[state]||'')+' '+(label||'corrida'),{body:body[state]||'',tag:'qa-run'});
+ }catch(_){}
+}
+// Cancela la corrida en curso: cierra el SSE (el server mata el proceso hijo en req.on('close')),
+// detiene la cola (bandera cancelled) y restaura la celda en curso a estado neutro.
+function cancelRun(){
+ if(!running)return;
+ cancelled=true;
+ if(activeES){try{activeES.close();}catch(_){}} activeES=null;
+ if(activeLiveEl)timerStop(activeLiveEl);
+ if(activeStId){var p=byId(activeStId);if(p)setPill(p,'idle');activeStId=null;}
+ activeLiveEl=null;
+ setBusy(false);
+ var b=byId('livebar');
+ if(b){b.className='livebar is-skip';var sp=b.querySelector('.lb-spin');if(sp)sp.textContent='■';byId('lbNow').textContent='Corrida cancelada';if(_lbHideT)clearTimeout(_lbHideT);_lbHideT=setTimeout(hideLivebar,3000);}
 }
 function logLine(logEl,text,cls){var d=document.createElement('div');d.className=cls||'';d.textContent=text;logEl.appendChild(d);logEl.scrollTop=logEl.scrollHeight;}
 function classify(t){
@@ -1038,6 +1096,8 @@ function syncLivebar(liveEl){
  else{pr.style.display='none';ct.style.display='none';}
 }
 byId('lbJump').addEventListener('click',function(){var l=window._activeLive;(l||byId('livebar')).scrollIntoView({behavior:'smooth',block:'center'});});
+byId('lbCancel').addEventListener('click',cancelRun);
+byId('btnExportMd').addEventListener('click',function(e){e.preventDefault();exportMarkdown();});
 
 function liveStart(liveEl,flowOverride){
  if(!liveEl)return;
@@ -1188,14 +1248,22 @@ function liveTriage(liveEl,t,skipped,why){
  var box=document.createElement('div');box.className='triage';var html='';
  if(skipped){
   html+='<div class="row"><span class="k">Qué pasó</span><span class="v">La corrida no verificó nada (<b>'+skipped+' omitido(s)</b>).</span></div>';
-  var por=(why==='auth')?'Esta área necesita sesión B2C (<code>rotoplas-auth-b2c.json</code>). Sin sesión sus tests <b>@auth</b> se omiten — no es fallo del sitio. Genérala desde Ajustes → "Generar sesión B2C".':'Probablemente faltó el App Password (Modo A) o no había nada que correr. <b>El verde NO significaría "OK"</b> → por eso es ámbar.';
+  var por=(why==='auth')?'Esta área necesita sesión B2C (<code>rotoplas-auth-b2c.json</code>). Sin sesión sus tests <b>@auth</b> se omiten — no es fallo del sitio.':'Probablemente faltó el App Password (Modo A) o no había nada que correr. <b>El verde NO significaría "OK"</b> → por eso es ámbar.';
   html+='<div class="row"><span class="k">Por qué</span><span class="v">'+por+'</span></div>';
+  if(why==='auth'&&ENV==='qa')html+='<div class="row"><span class="k"></span><span class="v"><button class="btn-sec" id="btnRegenAuth" type="button"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5"/></svg>Regenerar sesión B2C ahora</button></span></div>';
  }else{
   if(t.fails.length)html+='<div class="row"><span class="k">Qué falló</span><span class="v fail">'+t.fails.slice(0,3).join('<br>')+'</span></div>';
   html+='<div class="row"><span class="k">Causa probable</span><span class="v"><b>'+t.causa+'</b></span></div>';
   html+='<div class="row"><span class="k">Qué hacer</span><span class="v">'+t.pista+'</span></div>';
  }
  box.innerHTML=html;liveEl.appendChild(box);
+ var rb=box.querySelector('#btnRegenAuth');if(rb)rb.addEventListener('click',regenAuth);
+}
+// Genera la sesión B2C en contexto (cuando un área @auth se omitió por sesión faltante),
+// sin ir al modal de Ajustes. Reusa la acción gen-auth-b2c y refresca el semáforo al terminar.
+function regenAuth(){
+ if(running)return;
+ runOne({action:'gen-auth-b2c',stId:null,liveId:'live-map',logId:'log-map',flow:'',label:'Generar sesión B2C',onDone:function(s){if(s!=='err')loadPrereq();}});
 }
 function veredicto(d){var s=d.summary||{};if(d.code!==0||s.failed>0)return'err';if(s.passed===0&&s.skipped>0)return'skip';return'ok';}
 
@@ -1218,6 +1286,7 @@ function startRun(cfg){
  if(cfg.order)qs+='&order='+encodeURIComponent(cfg.order);
  if(cfg.stateValue)qs+='&state='+encodeURIComponent(cfg.stateValue);
  var es=new EventSource(qs);
+ activeES=es;activeStId=cfg.stId||null;activeLiveEl=liveEl;   // para Cancelar
  es.addEventListener('meta',function(e){var d=JSON.parse(e.data);if(logEl)logLine(logEl,'$ '+d.pretty+(d.headed==='1'||d.headed===true?'   (con ventana)':'   (sin ventana)'),'cmd');});
  es.addEventListener('line',function(e){
   var d=JSON.parse(e.data);if(d.text==='')return;
@@ -1239,14 +1308,15 @@ function startRun(cfg){
   if(cfg.action==='crear-orden'&&capturedOrder&&state!=='err')showOrder(capturedOrder,true);
   byId('lastRun').textContent=' · Última: '+new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
   recordRun(cfg.action,state,d.summary,{stId:cfg.stId,label:cfg.label||ACT_LABEL[cfg.action]||cfg.action});
-  es.close();
+  es.close();activeES=null;activeStId=null;activeLiveEl=null;
   if(cfg.onDone)cfg.onDone(state,capturedOrder);
  });
  es.onerror=function(){
+  if(cancelled){es.close();return;}              // cierre por Cancelar: no es un error real
   timerStop(liveEl);if(!cfg.isMaster)setPill(stEl,'err');
   liveDone(liveEl,'err','Se cortó la conexión con el panel');
   liveTriage(liveEl,{fails:[],causa:'Se cortó la conexión con el panel (SSE).',pista:'¿El servidor del panel sigue activo? Revisa la terminal de npm run dashboard.',clase:'otro'},0);
-  es.close();if(cfg.onDone)cfg.onDone('err','');
+  es.close();activeES=null;activeStId=null;activeLiveEl=null;if(cfg.onDone)cfg.onDone('err','');
  };
 }
 function veredictoMsg(flow,state,d){
@@ -1265,14 +1335,15 @@ function expandFor(cfg){
 // Refresca la galería si el bloque de evidencias está abierto (tras una corrida).
 function refreshEvidIfOpen(){var b=byId('evidBlock');if(b&&!b.classList.contains('collapsed'))loadEvidencias();}
 // Corrida simple (una celda / un botón)
-function runOne(cfg){if(running)return;expandFor(cfg);setBusy(true);var done=cfg.onDone;cfg.onDone=function(s,o){setBusy(false);refreshEvidIfOpen();if(done)done(s,o);};startRun(cfg);}
+function runOne(cfg){if(running)return;expandFor(cfg);setBusy(true);var done=cfg.onDone;cfg.onDone=function(s,o){setBusy(false);refreshEvidIfOpen();maybeNotify(cfg.label||ACT_LABEL[cfg.action]||cfg.action,s);if(done)done(s,o);};startRun(cfg);}
 // Cola secuencial (área completa / master)
 function runQueue(list,opts){
  if(running||!list.length)return;opts=opts||{};expandFor(list[0]);setBusy(true);
  if(opts.isMaster)setMaster('run');
  var worst='ok',i=0;
  function next(){
-  if(i>=list.length){setBusy(false);refreshEvidIfOpen();if(opts.isMaster){setMaster(worst);}if(opts.onAll)opts.onAll(worst);return;}
+  if(cancelled)return;                       // Cancelar detuvo la cola (setBusy ya se llamó)
+  if(i>=list.length){setBusy(false);refreshEvidIfOpen();if(opts.isMaster){setMaster(worst);}maybeNotify(opts.isMaster?'Revisar sitio':'Corrida por área',worst);if(opts.onAll)opts.onAll(worst);return;}
   var cfg=list[i++];cfg.queued=true;
   cfg.onDone=function(state){if(state==='err')worst='err';else if(state==='skip'&&worst!=='err')worst='skip';next();};
   startRun(cfg);
@@ -1292,12 +1363,14 @@ function cellCfg(area,dim){
  if(dim==='responde'){if(!area.responde)return null;return {action:'area-responde',area:area.key,stId:'p-'+area.key+'-responde',liveId:'live-map',logId:'log-map',flow:'checks',auth:area.auth,label:'Responde · '+area.label};}
  if(dim==='estructura'){return {action:'area',area:area.key,stId:'p-'+area.key+'-estructura',liveId:'live-map',logId:'log-map',flow:'checks',auth:area.auth,label:'Estructura · '+area.label};}
  if(dim==='flujo'){if(!area.flujo)return null;return {action:area.flujo,stId:'p-'+area.key+'-flujo',liveId:'live-map',logId:'log-map',flow:'checks',auth:area.auth,label:'Flujo · '+area.label};}
- return null; // movil: parqueado
+ if(dim==='movil'){if(!area.movil)return null;return {action:'area-movil',area:area.key,stId:'p-'+area.key+'-movil',liveId:'live-map',logId:'log-map',flow:'checks',auth:area.auth,label:'Móvil · '+area.label};}
+ return null;
 }
 function cellValText(area,dim){
  if(dim==='responde')return area.responde?(area.respondeCount+' URL'+(area.respondeCount!==1?'s':'')):'—';
  if(dim==='estructura')return area.files.join(' · ');
  if(dim==='flujo')return area.flujo?(area.flujoLabel||'mutante 🔒'):'⏳ pendiente';
+ if(dim==='movil')return area.movil?(area.movilLabel||'375px'):'⏳ parqueado';
  return '⏳ parqueado';
 }
 function buildMap(areas){
@@ -1306,9 +1379,12 @@ function buildMap(areas){
   AREA_LABELS[a.key]=a.label;
   var row=document.createElement('div');row.className='maprow';
   var h=document.createElement('div');h.className='maprow-h';
+  var nmWrap=document.createElement('div');nmWrap.className='anmwrap';
   var nm=document.createElement('span');nm.className='anm';nm.textContent=a.label;
   if(a.lock){var lk=document.createElement('span');lk.className='lock';lk.textContent='🔒';nm.appendChild(lk);}
-  h.appendChild(nm);
+  nmWrap.appendChild(nm);
+  if(a.desc){var dsc=document.createElement('span');dsc.className='adesc';dsc.textContent=a.desc;nmWrap.appendChild(dsc);}
+  h.appendChild(nmWrap);
   var sp=document.createElement('span');sp.className='sp';h.appendChild(sp);
   // Botón "correr área" = sus dimensiones de lectura (Responde + Estructura).
   var rb=document.createElement('button');rb.className='btn-sec';rb.setAttribute('data-cell','area-read');rb.setAttribute('data-area',a.key);
@@ -1327,7 +1403,7 @@ function buildMap(areas){
    cell.appendChild(pill);cell.appendChild(dimEl);cell.appendChild(valEl);
    var runnable=!!cfg;
    if(dim.key==='responde'&&!a.responde){cell.classList.add('is-na');cell.disabled=true;setPill(pill,'idle');}
-   else if(dim.key==='movil'){cell.classList.add('is-pend');cell.disabled=true;setPill(pill,'pend');cell.title='Móvil 375px parqueado (5-mobile en test.skip). Ver tests/COBERTURA.md';}
+   else if(dim.key==='movil'&&!a.movil){cell.classList.add('is-pend');cell.disabled=true;setPill(pill,'pend');cell.title='Móvil 375px parqueado en esta área. Ver tests/COBERTURA.md';}
    else if(dim.key==='flujo'&&!a.flujo){cell.classList.add('is-pend');cell.disabled=true;setPill(pill,'pend');cell.title='Flujo aún sin prueba. Ver tests/COBERTURA.md';}
    else{setPill(pill,'idle');
     if(dim.key==='flujo'&&a.lock)cell.classList.add('is-flujolock'); // candado solo si muta
@@ -1345,13 +1421,13 @@ function buildMap(areas){
 }
 function runAreaRead(key){
  var a=AREAS.filter(function(x){return x.key===key;})[0];if(!a)return;
- var list=[];var r=cellCfg(a,'responde');if(r)list.push(r);var e=cellCfg(a,'estructura');if(e)list.push(e);
+ var list=[];var r=cellCfg(a,'responde');if(r)list.push(r);var e=cellCfg(a,'estructura');if(e)list.push(e);var m=cellCfg(a,'movil');if(m)list.push(m);
  runQueue(list,{});
 }
 function runMaster(){
  // Lectura de TODAS las áreas: Responde + Estructura. Enciende cada celda.
  var list=[];
- AREAS.forEach(function(a){var r=cellCfg(a,'responde');if(r)list.push(r);var e=cellCfg(a,'estructura');if(e)list.push(e);});
+ AREAS.forEach(function(a){var r=cellCfg(a,'responde');if(r)list.push(r);var e=cellCfg(a,'estructura');if(e)list.push(e);var m=cellCfg(a,'movil');if(m)list.push(m);});
  runQueue(list,{isMaster:true});
 }
 byId('btnMaster').addEventListener('click',runMaster);
@@ -1371,11 +1447,51 @@ function renderCobertura(){
   if(a.responde){total++;withTest++;}
   total++;withTest++; // estructura (todas tienen)
   total++;if(a.flujo)withTest++;else pend++; // flujo
-  total++;pend++; // movil (parqueado)
+  total++;if(a.movil)withTest++;else pend++; // movil
  });
  byId('sumCobNum').textContent=withTest+'/'+total+' celdas';
  byId('sumCob').innerHTML='<span class="sc ok"><span class="d"></span>'+withTest+' con prueba</span><span class="sc pend"><span class="d"></span>'+pend+' ⏳</span>';
 }
+
+// ─── Exportar resumen a Markdown (pegar en Jira/Slack) ────────────────────────
+// Símbolo de una celda: lee el pill ya pintado + el estado estructural conocido (—/⏳).
+function dimSym(a,dim){
+ if(dim==='responde'&&!a.responde)return '—';
+ if(dim==='flujo'&&!a.flujo)return '⏳';
+ if(dim==='movil'&&!a.movil)return '⏳';
+ var p=byId('p-'+a.key+'-'+dim);
+ if(p){if(p.classList.contains('is-ok'))return '✓';if(p.classList.contains('is-err'))return '✗';if(p.classList.contains('is-skip'))return '○';if(p.classList.contains('is-run'))return '…';}
+ return '·'; // sin correr en esta sesión
+}
+function buildMarkdown(){
+ var envLabel=(ENV==='prod')?'Producción':'QA';
+ var ok=0,err=0,skip=0,pills=document.querySelectorAll('#map .pill');
+ for(var i=0;i<pills.length;i++){var c=pills[i];if(c.classList.contains('is-ok'))ok++;else if(c.classList.contains('is-err'))err++;else if(c.classList.contains('is-skip'))skip++;}
+ var L=[];
+ L.push('## Panel QA B2C — '+envLabel+' — '+new Date().toLocaleString('es-MX'));
+ L.push('');
+ L.push('**Salud:** ✓ '+ok+' · ✗ '+err+' · ○ '+skip+'   ·   **Cobertura:** '+byId('sumCobNum').textContent);
+ L.push('');
+ L.push('| Área | Responde | Estructura | Flujo | Móvil |');
+ L.push('|---|:--:|:--:|:--:|:--:|');
+ var fails=[];
+ AREAS.forEach(function(a){
+  var r=dimSym(a,'responde'),e=dimSym(a,'estructura'),f=dimSym(a,'flujo'),m=dimSym(a,'movil');
+  L.push('| '+a.label+(a.lock?' 🔒':'')+' | '+r+' | '+e+' | '+f+' | '+m+' |');
+  [['Responde',r],['Estructura',e],['Flujo',f],['Móvil',m]].forEach(function(p){if(p[1]==='✗')fails.push(a.label+' › '+p[0]);});
+ });
+ if(fails.length){L.push('');L.push('### Fallos');fails.forEach(function(x){L.push('- **'+x+'**');});}
+ L.push('');
+ L.push('_Leyenda: ✓ ok · ✗ falla · ○ omitido (sesión) · ⏳ pendiente · — no aplica · · sin correr_');
+ return L.join('\\n');
+}
+function exportMarkdown(){
+ var md=buildMarkdown();
+ var done=function(msg){var b=byId('btnExportMd');if(!b)return;var prev=b.textContent;b.textContent=msg;setTimeout(function(){b.textContent=prev;},1800);};
+ if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(md).then(function(){done('✓ copiado');}).catch(function(){done('descargado');dlMarkdown(md);});}
+ else{dlMarkdown(md);done('descargado');}
+}
+function dlMarkdown(md){try{var blob=new Blob([md],{type:'text/markdown'});var u=URL.createObjectURL(blob);var a=document.createElement('a');a.href=u;a.download='qa-b2c-resumen.md';document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(u);},2000);}catch(_){}}
 
 // ─── Historial ────────────────────────────────────────────────────────────────
 var HIST_KEY='dashHistoryV2',LAST_KEY='dashLastV2',HIST_MAX=15;

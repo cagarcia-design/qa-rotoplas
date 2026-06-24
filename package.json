@@ -6,11 +6,16 @@
   "scripts": {
     "postinstall": "playwright install chromium",
     "dashboard": "node scripts/dashboard.js",
-    "check:b2c": "npx playwright test --project=b2c-contracts --grep-invert \"@capa2|@smoke\"",
+    "check:b2c": "npx playwright test --project=b2c-contracts --grep-invert \"@capa2|@smoke|@perf\"",
     "check:b2c:health": "npx playwright test --project=b2c-contracts --grep @health",
     "check:b2c:contracts": "npx playwright test --project=b2c-contracts --grep @contract",
     "check:b2c:content": "npx playwright test --project=b2c-contracts --grep @content",
-    "check:b2c:anon": "npx playwright test --project=b2c-contracts --grep-invert \"@auth|@capa2|@smoke\"",
+    "check:b2c:anon": "npx playwright test --project=b2c-contracts --grep-invert \"@auth|@capa2|@smoke|@perf\"",
+    "check:b2c:perf": "npx playwright test --project=b2c-contracts --grep @perf",
+    "check:b2c:xcut": "npx playwright test --project=b2c-contracts --grep @xcut",
+    "check:b2c:bloqueos": "npx playwright test --project=b2c-contracts --grep @bloqueo",
+    "check:b2c:forms": "npx playwright test --project=b2c-contracts --grep @forms",
+    "check:b2c:servicios:flujo": "npx playwright test --project=b2c-contracts --grep @flserv",
     "check:b2c:forms:email": "npx playwright test --project=b2c-contracts --grep @email",
     "check:b2c:purchase": "npx playwright test --project=b2c-contracts --grep @purchase",
     "check:b2c:login": "npx playwright test --project=b2c-contracts --grep @login",
@@ -20,8 +25,10 @@
     "auth:b2c": "node setup-auth-b2c.js"
   },
   "dependencies": {
+    "chrome-launcher": "^1.2.1",
     "dotenv": "^17.3.1",
     "imapflow": "^1.4.0",
+    "lighthouse": "^13.4.0",
     "playwright": "^1.58.2"
   },
   "devDependencies": {

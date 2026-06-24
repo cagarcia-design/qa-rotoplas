@@ -95,6 +95,51 @@ test.describe('@contract Cascarón global — Footer', () => {
   });
 });
 
+test.describe('@contract Cascarón global — Componentes cross-page', () => {
+
+  // Estos 3 viven en el cascarón (toda página) pero no estaban cubiertos
+  // (auditoría de profundidad s29). Son presencia, no comportamiento.
+
+  test('Chatbot Silvia (df-messenger) presente', async ({ page }) => {
+    await irA(page, '/');
+    // Web Component Dialogflow CX (inventario I.11). El tag <df-messenger> está en
+    // el HTML aunque el script externo (gstatic) hidrate tarde → toBeAttached.
+    await expect(
+      page.locator('df-messenger'),
+      'Falta el chatbot Silvia (df-messenger) — componente cross-page'
+    ).toBeAttached({ timeout: 10000 });
+  });
+
+  test('Newsletter del footer presente (input + botón Suscribirse)', async ({ page }) => {
+    await irA(page, '/');
+    await scrollAlFondo(page); // el newsletter del footer monta perezoso
+    // Anclajes estables del inventario I.10 (placeholder + aria-label de autor).
+    // .first(): se renderiza en home Y footer (duplicado).
+    await expect(
+      page.getByPlaceholder('Compartenos un email').first()
+    ).toBeAttached();
+    await expect(
+      page.locator('button[aria-label="Suscribirse"]').first()
+    ).toBeAttached();
+  });
+
+  test('Barra promocional close-promo (presencia condicional)', async ({ page }) => {
+    await irA(page, '/');
+    // Banner dismissible CSS-only (inventario I.5): checkbox #close-promo + CTA
+    // "Ver cómo" → abre el modal de cobertura. Es contenido de campaña → si no se
+    // sirve, SKIP (no rojo), igual que el A/B del wizard.
+    const promo = page.locator('#close-promo');
+    test.skip(
+      (await promo.count()) === 0,
+      'Barra promocional no servida en esta corrida (banner de campaña, condicional).'
+    );
+    await expect(promo).toBeAttached();
+    await expect(
+      page.getByRole('button', { name: /ver c[óo]mo/i }).first()
+    ).toBeVisible();
+  });
+});
+
 // ─────────────────────────────────────────────────────────────────────────
 // BASELINE EJECUTABLE — bugs conocidos del cascarón marcados como expected-fail.
 // Si alguno PASA, el bug se arregló → cerrarlo en el inventario (Parte IV).

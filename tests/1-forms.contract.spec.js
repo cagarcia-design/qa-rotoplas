@@ -1,10 +1,14 @@
 // tests/1-forms.contract.spec.js
-// CAPA 1 · CONTRACT — Formularios públicos críticos.
-// Verifica que los formularios de login, signup, recuperación de contraseña y
-// seguimiento de pedido rendericen sus campos y respondan al submit (sin depender
-// de auth ni de datos reales). Lo que, si desaparece, es incidente P1.
+// CAPA 1 · CONTRACT — Formularios públicos del área Mi cuenta.
+// Verifica que los formularios de login, signup y recuperación de contraseña
+// rendericen sus campos y respondan al submit (sin depender de auth ni de datos
+// reales). Lo que, si desaparece, es incidente P1.
 //
-// Anclajes estables del inventario I.14.a-d y II.12. Sin clases hash de Qwik.
+// NOTA (taxonomía s29): el formulario de SEGUIMIENTO de pedido salió de aquí a
+// `2-seguimiento.contract.spec.js` (área Compra, post-venta anónimo). Este spec
+// quedó acotado a los forms de Mi cuenta y se sumó a AREAS.cuenta.files.
+//
+// Anclajes estables del inventario I.14.a-c. Sin clases hash de Qwik.
 //
 // Tag: @forms @contract
 // Correr: npm run check:b2c:forms
@@ -119,28 +123,6 @@ test.describe('@forms @contract Forgot password — /forgot-password/', () => {
     await page.getByRole('button', { name: /enviar correo/i }).click();
     await expect(
       page.getByText(/correo electrónico válida/i).first()
-    ).toBeVisible({ timeout: 5000 });
-  });
-
-});
-
-test.describe('@forms @contract Seguimiento — /traking/', () => {
-
-  test('Formulario de seguimiento visible', async ({ page }) => {
-    await irA(page, '/traking/');
-    // BUG-B2C-036: H1 dice "Contáctanos" o no existe. Usamos cualquier heading.
-    await expect(page.getByRole('heading').first()).toBeVisible();
-    // BUG-B2C-094: input con name="password" en vez de orderNumber
-    await expect(page.locator('input#password, input[name="password"]')).toBeVisible();
-    await expect(page.locator('button:has-text("Ver")').first()).toBeVisible();
-  });
-
-  test('Error con número de pedido vacío', async ({ page }) => {
-    await irA(page, '/traking/');
-    await page.getByRole('button', { name: /ver pedido/i }).click();
-    // BUG-B2C-098: error dice "incorrecto" aunque el campo está vacío
-    await expect(
-      page.getByText(/incorrecto|pedido/i).first()
     ).toBeVisible({ timeout: 5000 });
   });
 

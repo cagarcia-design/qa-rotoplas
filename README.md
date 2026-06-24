@@ -22,6 +22,7 @@ npm install        # instala dependencias y descarga Chromium (postinstall)
 npm run dashboard               # Panel web local → http://127.0.0.1:4599 (RECOMENDADO)
 npm run check:b2c               # Run rápido SIN efectos secundarios (health + contracts + content)
 npm run check:b2c:anon          # Solo checks que NO requieren login
+npm run check:b2c:perf          # Performance: Lighthouse/CWV (Home, PDP) — lento (~1 min), solo lectura. QA o prod.
 npm run report                  # Reporte HTML del último run
 ```
 
@@ -106,7 +107,9 @@ B2C_BASE_URL=https://rotoplas.com.mx npm run check:b2c
     ├── 2-money-path.contract.spec.js ← Capa 1 @auth: PDP → carrito → checkout
     ├── 3-capa2-pipeline.contract.spec.js ← Capa 2: pipeline CT → correo
     ├── 5-mobile.contract.spec.js    ← Capa 1 @mobile 375px: PDP/catálogo (Home parqueado)
-    └── 6-xcut.contract.spec.js      ← Calidad transversal @xcut: excepciones JS + 404/catchall
+    ├── 6-xcut.contract.spec.js      ← Calidad transversal @xcut: excepciones JS + 404/catchall
+    ├── 8-perf.contract.spec.js      ← Calidad transversal @perf: Lighthouse/CWV (Home, PDP) · on-demand
+    └── 9-flujo-areas.contract.spec.js ← Flujos de área: buscador (@flheader) · soluciones (@flhome) · contacto (@flinst)
 ```
 
 > **Panel rediseñado por ÁREA (2026-06): ** el dashboard organiza todo por área del sitio
@@ -129,3 +132,5 @@ B2C_BASE_URL=https://rotoplas.com.mx npm run check:b2c
 - [Opcional] `.env` con las 6 llaves `CT_*` (Commercetools) para estados de orden y correos.
   **No se captura en el panel; viene del `.env` compartido en privado** (gitignored).
 - [Opcional] `.env` con `GMAIL_IMAP_USER` y `GMAIL_IMAP_PASS` para verificación de correos (Modo B)
+- `lighthouse` + `chrome-launcher` (ya en `dependencies`) para el check de Performance (`check:b2c:perf`).
+  Si la instalación fallara en algún equipo, el check hace **skip limpio** (no rompe el resto de la suite).

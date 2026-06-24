@@ -1,7 +1,7 @@
 # Regresiones-Smoke B2C — Mapeo exhaustivo de qarotoplasmx.io
 
 > **Jira URL:** N/A (iniciativa interna, gemela del trabajo realizado en `tickets/regresiones-smoke/` para B2B)
-> **Última sesión:** s26 — 2026-06-18 (Capa 2 N2 implementada + profundización contracts; ver "### Sesión 26" abajo). _Anterior:_ s24 — 2026-06-15. Dashboard: **Checks fusionados** (Health+Content → "¿Responden y renderizan?", 33 tests) + **Estructura crítica como rejilla compacta de 7 zonas** (vista primaria) + **tira fija de estado en vivo** (visible al scrollear) + **bloque de info de orden creada** (nº + Ver estado/pagos/historial vía ct-api). **Login TECLEADO real** en la compra (`crear-orden-b2c.js` default `B2C_LOGIN_MODE=type` → orden `6162026BCY8L`). Bug de herramienta arreglado (`@health|@content` pipe de shell). **Diagnóstico de profundidad de contracts → `tests/contracts/b2c/COBERTURA.md`** (mayoría N0 forma; hueco caro = money-path no completa la compra). **0 bugs del sitio. SIN COMMIT** (todo untracked).
+> **Última sesión:** s28 — 2026-06-23 (4 bloques el mismo día: **28** F3 Performance `8-perf` Lighthouse/CWV; **28b** Móvil desparqueado + columna Móvil del panel; **28c** F6 adiciones —cancelar/notificar/exportar MD/regenerar sesión— + flujos de área `9-flujo-areas` —buscador/soluciones/contacto—; **28d** columna Móvil COMPLETA (las 7 áreas, `5-mobile` 9 tests). Todo verificado en vivo en el panel. Cobertura del mapa **26/27 celdas** (solo resta Servicios Flujo = compra de servicio mutante). Ver "### Sesión 28d/28c/28b/28" abajo). _Anteriores:_ s27 — 2026-06-23 (rediseño del panel por área); s26 — 2026-06-18 (Capa 2 N2). Dashboard: **Checks fusionados** (Health+Content → "¿Responden y renderizan?", 33 tests) + **Estructura crítica como rejilla compacta de 7 zonas** (vista primaria) + **tira fija de estado en vivo** (visible al scrollear) + **bloque de info de orden creada** (nº + Ver estado/pagos/historial vía ct-api). **Login TECLEADO real** en la compra (`crear-orden-b2c.js` default `B2C_LOGIN_MODE=type` → orden `6162026BCY8L`). Bug de herramienta arreglado (`@health|@content` pipe de shell). **Diagnóstico de profundidad de contracts → `tests/contracts/b2c/COBERTURA.md`** (mayoría N0 forma; hueco caro = money-path no completa la compra). **0 bugs del sitio. SIN COMMIT** (todo untracked).
 > **Fecha de inicio:** 2026-05-27
 > **Trigger:** Replicar para el sitio B2C la auditoría profunda que se hizo al B2B, generando DOM contracts post-deploy + inventario navegable
 > **Rediseño del panel:** la reestructura completa del dashboard (arquitectura por área + plan por fases + decisiones) vive en `diseno-dashboard.md` — fuente de verdad (DISEÑO APROBADO 2026-06-19, pendiente implementar). **Nota de entorno:** el repo activo es ESTE (`tickets/regresiones-smoke-b2c`, config ya aplanada y sana); existe un checkout STALE en `~/Documents/rotoplas-qa` que NO se debe editar (causó un falso diagnóstico de "plomería rota").
@@ -173,6 +173,75 @@ Estos hallazgos surgieron al construir los contracts y son **load-bearing para a
 - Comandos: `check:b2c` (todo), `check:b2c:health`, `check:b2c:contracts`, **`check:b2c:anon`** (sin `@auth`, no requiere login — útil en CI sin secretos).
 - CI listo-apagado: `.github/workflows/check-b2c.yml` (manual `workflow_dispatch`; disparadores auto comentados; ruta `@auth` requiere secretos `B2C_USER`/`B2C_PASS`).
 - Doc operativa + pitch a stakeholders: `tests/contracts/b2c/README.md`.
+
+### Sesión 29 (2026-06-24) — Auditoría de taxonomía de áreas + disolución de bloqueos
+
+Auditoría: ¿el sitio está bien categorizado en las 7 áreas? Se confrontó cada página real (inventario Parte II, 23 páginas) y componente (Parte I) contra el mapa. Hallazgos y fixes aplicados:
+
+- **Hueco MECE (taxonomía incompleta):** `/nosotros/`, `/blog/`, `/recursos/` son páginas B2C reales (canonical en qarotoplasmx.io, indexables) **sin área**. Adoptadas en **Institucional / Contenido** → nuevo `1-contenido.contract.spec.js` (render real, NO la página de error BUG-034) + 3 URLs en `HEALTH_URLS`.
+- **Ubicación incorrecta:** Seguimiento `/traking/` estaba en Mi cuenta (área 🔒 auth), pero es **anónimo y post-venta** → movido a **Compra**. Su contract salió de `1-forms` a `2-seguimiento.contract.spec.js`.
+- **Huérfano:** `1-forms` (login/signup/forgot) no estaba en ninguna área → corría solo vía `check-all`. Sumado a `AREAS.cuenta.files` (Estructura de Mi cuenta).
+- **Mal categorizado:** `0-links` era `@health` y se colaba en el Responde de las 7 áreas (y COBERTURA lo llamaba "Estructura"). Re-taggeado `@xcut` → corre una vez en la transversal "Errores y enlaces".
+- **Responde asimétrico:** FAQ/distribuidores/legales/hub de servicios no tenían check 200 (solo Estructura los navegaba). Agregados a `HEALTH_URLS`.
+- **Profundidad cascarón:** chatbot Silvia (`df-messenger`), newsletter del footer y barra promo `close-promo` no estaban cubiertos → contracts de presencia en `1-global-layout`.
+- **Bloqueos — triaje (fragilidad disoluble vs muro externo):** **BUG-457** (wizard A/B) NO era muro: se disolvió pineando `builderVisitorId` (variante determinista) → **Flujo de Servicios real** `7-servicios-flujo` (`@flserv`, cotización → carrito, no mutante). Los muros genuinos (BUG-566 reseñas E2E · `Delivered`→correo · forgot-prod) → **centinelas** `9-centinelas` (`@bloqueo`): cubren la parte no-rota y la rota flippea sola al arreglarse. Acción transversal `bloqueos` en el panel.
+- **Docs:** COBERTURA mapa 7×4 + transversales + pendientes sincronizados; `diseno-dashboard.md` mapa actualizado. Scripts npm nuevos: `check:b2c:xcut`, `check:b2c:forms`, `check:b2c:bloqueos`, `check:b2c:servicios:flujo`.
+
+> Pendiente de correr en vivo para verificar verde (no ejecutado en esta sesión): `1-contenido`, `2-seguimiento`, `7-servicios-flujo`, los 3 contracts cross-page del cascarón y `9-centinelas`.
+
+### Sesión 28d (2026-06-23) — Columna Móvil COMPLETA (las 7 áreas)
+
+Cierre de la columna Móvil del mapa. `5-mobile.contract.spec.js` pasa de 4 a **9 tests** (todos verdes): se añadieron las 5 áreas que faltaban a 375px — **cascarón** (footer global) · **servicios** (`/servicios-lavado/`) · **institucional** (`/contacto/`, asierta el botón "Enviar" porque el heading "Contacto" es lazy en móvil) · **compra** (`/cart/`, "Mi carrito", anónimo) · **mi cuenta** (`/customer`, **@auth** con skip sin sesión, mismo patrón que `2-customer`). Cada uno: shell renderiza + sin overflow REAL (intento-de-scroll). Verificado en vivo a 375px con chrome-devtools antes de escribir.
+
+- **Panel:** las 7 áreas tienen `movil` en `AREAS`; celdas Móvil corribles; auth propagado al cellCfg de móvil (cuenta móvil sin sesión → ○ + triage auth + botón regenerar).
+- **Bug atrapado:** los patrones `movil` nuevos tienen **espacios pero no `|`** → bajo `shell:true` `q()` no los citaba y el shell partía el `--grep`. Arreglado: `q()` ahora cita también si hay espacios. (Home/PDP funcionaban solo por su `|`.)
+- **Verificado en vivo:** celda Móvil de Servicios → corre → **verde**; cobertura del mapa **26/27 celdas** (único ⏳ restante: Servicios Flujo = compra de servicio mutante). `@mobile` completo: **9 passed**.
+
+### Sesión 28c (2026-06-23) — F6 adiciones del panel + flujos de área (buscador · soluciones · contacto)
+
+Continuación de s28. Cierre de **F6 adiciones** y mayoría de **flujos de área**. Todo **verificado interactivamente en el panel** (chrome-devtools), no solo endpoints. **0 bugs nuevos del sitio** (1 observación: el form de contacto valida bien; el selector de soluciones navega — ver abajo).
+
+**F6 adiciones (panel, `scripts/dashboard.js`):**
+- **Cancelar corrida:** botón en la livebar; cierra el `EventSource` → el server mata el proceso hijo (`req.on('close')`); bandera `cancelled` detiene la cola; restaura la celda en curso. Verificado: cancelar el maestro a media corrida → `running=false`, livebar "Corrida cancelada".
+- **Notificación del navegador:** al terminar corridas **≥25 s** (Notification API, permiso lazy, degrada en silencio).
+- **Exportar Markdown:** botón "copiar resumen (Markdown)" → arma resumen (ambiente · salud · cobertura · tabla 7×4 por área · fallos) al portapapeles (+ descarga fallback). `buildMarkdown()` verificado en vivo.
+- **Regenerar sesión B2C contextual:** botón inline en el triage de skip `@auth` (solo QA) → dispara `gen-auth-b2c` + refresca el prereq strip.
+- **Bug atrapado en construcción:** dentro del template literal `PAGE`, `'\n'` se interpreta como salto de línea al generar el HTML → rompía el JS de cliente; se requiere `'\\n'` (doble escape). Detectado validando el JS servido con `new Function()`.
+
+**Flujos de área — `9-flujo-areas.contract.spec.js`** (tags por área SIN substring `@flujo` para no mezclar al grepear):
+- **Header buscador (`@flheader`):** typear "tinaco" + Enter → navega a `/products/?search=tinaco` (SRP) con cards `article[class*="card-product-filter"]` que mencionan el término. Input duplicado (BUG-016 → `.first()`).
+- **Home selector de soluciones (`@flhome`):** el botón "Soluciones" arranca disabled; elegir una solución (click en el **label**, el radio nativo está oculto) lo habilita y al enviar **navega a la categoría** ("Baja presión de agua" → `/products/presurizacion/`). _Corrección del usuario en sesión: sí navega; mi primer chequeo fue prematuro (la navegación tarda ~1-3 s)._
+- **Institucional contacto (`@flinst`):** submit **vacío** → "Este es un campo requerido" + clase `error`, sin envío (sigue en `/contacto/`). Seguro (no muta).
+- **Cableado al panel:** acciones `header-flujo`/`home-flujo`/`institucional-flujo`; celdas Flujo de cascarón/home/institucional dejan de ser ⏳. Verificado en vivo: click en celda Flujo de Home → corre → verde.
+- **Residual:** faq acordeón (BUG-091, mecanismo dudoso) · distribuidores encadenado (selects + Maps) · **compra de servicio** (mutante, requiere pago real + zona A/B BUG-457 → **diferido** hasta autorización; no se shippeó spec sin verificar).
+
+**Verificación:** panel ejercido interactivamente (celda Móvil PDP → verde · celda Flujo Home → verde · export MD correcto · cancelar funciona). **Cobertura del mapa: 21/27 celdas.** Regresión anon completa: **91 passed · 2 flaky · 0 fail** (flaky preexistentes: content Calentamiento + signup, recuperados en retry).
+
+### Sesión 28b (2026-06-23) — Móvil: desparqueo Home + columna Móvil del panel
+
+Continuación de s28. **Móvil deja de estar parqueado** para Home y Catálogo/PDP, y el panel **ya corre Móvil por área**.
+
+- **Causa raíz del parqueo (resuelta):** los 2 tests Home de `5-mobile` usaban `label[for="open-menu"]` — que es un **artefacto 0x0 NO clickeable** (toggle del mega-menú desktop). El trigger mobile real es **`button[aria-label="Abrir menú"]`** (ya mapeado en inventario I.2/línea 138 + evidencia F4-01). Al hacer click (CDP real de Playwright) se monta **`.mobile-menu-content`** (ausente antes) → esa es la aserción de apertura. NO era un problema de Qwik on:click ni del duplicado BUG-005 como se creyó; era selector equivocado. Confirmado con diagnóstico en vivo a 375px.
+- **`5-mobile`:** 4 tests verdes y **estables (2 corridas)**: Home header+hamburguesa, hamburguesa abre menú, PDP 375px, catálogo 375px. Cero skips.
+- **Panel — columna Móvil cableada:** acción `area-movil` (corre `5-mobile` recortado por título según `AREAS[area].movil`: home=`Home: header|Hamburguesa abre`, pdp=`PDP en 375px|Catálogo en 375px`). Celdas Móvil de Home y Catálogo/PDP ahora **corribles** (dejan de ser ⏳); incluidas en "Correr área" y en el maestro "Revisar sitio" como **dimensión de lectura** (diseño §4). `/config` expone `movil`/`movilLabel` por área. Verificado end-to-end: `/stream?action=area-movil&area=pdp` → 2 passed con eventos `@@DASH` que encienden la celda.
+- **Cobertura:** las celdas Móvil de Home y Catálogo/PDP pasan de ⏳ a ✓ (sube el contador del resumen).
+
+**Resta (roadmap):** Móvil de las áreas mutantes Compra/Mi cuenta a 375px.
+
+### Sesión 28 (2026-06-23) — F3 Performance (Lighthouse/CWV) → cierra Calidad transversal
+
+Cierre de la fila **Performance** del panel (último ⏳ de F3). Con F7 ya commiteado (s27 tardía, `b525d47`), **F0–F7 quedan completas**; lo que resta es roadmap (Móvil + adiciones F6 + calidad transversal a11y/SEO/seguridad/visual). **0 bugs nuevos del sitio.**
+
+**Entregado y verificado en vivo:**
+- **`tests/8-perf.contract.spec.js` (`@perf`)** — Lighthouse 13 + chrome-launcher sobre el Chromium de Playwright (mobile), en **Home + PDP**. Categorías (perf/a11y/bp/seo) + Core Web Vitals (LCP/CLS/TBT/FCP).
+- **Diseño anti-flaky (decisión clave):** el score de performance es ruidoso por timing → se parten las aserciones por estabilidad de la señal. Categorías **deterministas** (a11y/bp/seo) con piso = baseline − margen (15); **perf-score** y **CWV** solo con **pisos de catástrofe** holgados (perf ≥ 20, LCP < 12 s, CLS < 0.5, TBT < 4 s). Los números reales se imprimen siempre (marcador `@@PERF`). Todos los umbrales por env.
+- **Baseline re-anclado:** los números s12 (89/77 perf) eran de **DevTools MCP `lighthouse_audit`** (otra versión/criterio) → no comparables con esta corrida autónoma. Baseline fresco medido con ESTA herramienta: Home perf ~44 · a11y 89 · bp 58 · seo 100 ; PDP perf ~50 · a11y 79 · bp 58 · seo 85.
+- **Quirk Windows:** `chrome-launcher` v1 `kill()` es síncrono (no promesa) y lanza `EPERM` al borrar su temp dir mientras Chrome suelta el handle — el proceso sí muere, solo la limpieza falla → envuelto en try/catch.
+- **Panel:** acción `perf` (allowlist) + botón en la fila Performance (deja de ser ⏳) + live/log propios. **Excluido** del run rápido (`check:b2c`/`anon`) y de "Revisar sitio" (es lento, ~1 min, on-demand). Script `npm run check:b2c:perf`. Deps `lighthouse`+`chrome-launcher` en `dependencies`; **skip limpio** si faltan.
+
+**Verificación:** **2 corridas seguidas verdes** (2 passed c/u, ~31 s) con categorías deterministas idénticas run-to-run → confirma no-flaky. Panel: `data-action="perf"` en el HTML servido + `/stream?action=perf` arma `--grep @perf`; `--list` confirma perf fuera del run rápido y dentro de su propio script.
+
+**Pendientes (roadmap, sin cambios):** Móvil (reactivar `5-mobile`) · resto de adiciones F6 (exportar Markdown, cancelar corrida, notificación, regenerar sesión contextual) · calidad transversal a11y/SEO/seguridad/regresión visual · flujos de área restantes (buscador, soluciones, compra de servicio, contacto/faq/distribuidores) · F7 residual (filtros/orden de categoría).
 
 ### Sesión 27 (2026-06-23) — Rediseño del panel POR ÁREA + evidencias organizadas + calidad transversal
 

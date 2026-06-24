@@ -28,17 +28,21 @@ Un solo eje: **por ÁREA del sitio**. Cada área se mide en 4 dimensiones (natur
 
 | # | Área | Responde | Estructura | Flujo | Móvil |
 |---|---|---|---|---|---|
-| 1 | **Header y Footer** | — | `1-global-layout` · `0-links` ✓ | buscador · links a destino ⏳ | ⏳ |
-| 2 | **Home** | `/` ✓ | `1-home` ✓ | selector de soluciones navega ⏳ | ⏳ |
-| 3 | **Catálogo / PDP** | 7 categorías ✓ | `1-pdp` · `1-catalog` ✓ | `7-pdp-flujo` ✓ (galería · acordeones · compra por CP) + add-to-cart persiste en `2-money-path` 🔒 | ⏳ |
-| 4 | **Servicios** | `/servicios-lavado/` ✓ | `1-servicios` · `1-servicio-lavado` ✓ | compra del servicio ⏳ | ⏳ |
-| 5 | **Institucional** | contacto ✓ | `1-contacto` · `1-faq` · `1-distribuidores` · `1-legales` ✓ | contacto submit · faq acordeón · distribuidores encadenado ⏳ | ⏳ |
-| 6 | **Compra (carrito → pago)** 🔒 | cart · checkout1 ✓ | `2-cart-empty` · `2-money-path` ✓ | `3-money-path-purchase` ✓ (mutante 🔒) | ⏳ |
-| 7 | **Mi cuenta** 🔒 | login · signup · forgot · seguimiento ✓ | `2-customer` · `2-pci-baseline` ✓ | `1-login` ✓ (mutante 🔒) | ⏳ |
+| 1 | **Header y Footer** | — | `1-global-layout` ✓ (header · nav · footer + chatbot · newsletter · barra promo) | `9-flujo-areas` ✓ (buscador → SRP con resultados) | `5-mobile` ✓ (footer global 375px) |
+| 2 | **Home** | `/` ✓ | `1-home` ✓ | `9-flujo-areas` ✓ (selector de soluciones → categoría) | `5-mobile` ✓ (header + hamburguesa abre menú) |
+| 3 | **Catálogo / PDP** | 7 categorías ✓ | `1-pdp` · `1-catalog` ✓ | `7-pdp-flujo` ✓ (galería · acordeones · compra por CP) + add-to-cart persiste en `2-money-path` 🔒 | `5-mobile` ✓ (PDP + catálogo 375px) |
+| 4 | **Servicios** | hub `/servicios/` · `/servicios-lavado/` ✓ | `1-servicios` · `1-servicio-lavado` ✓ | `7-servicios-flujo` ✓ (cotización → carrito; variante A/B pineada) | `5-mobile` ✓ (landing 375px) |
+| 5 | **Institucional / Contenido** | contacto · faq · distribuidores · legales · **nosotros · blog · recursos** ✓ | `1-contacto` · `1-faq` · `1-distribuidores` · `1-legales` · `1-contenido` ✓ | `9-flujo-areas` ✓ (contacto valida submit vacío) · faq acordeón + distribuidores ⏳ | `5-mobile` ✓ (contacto 375px) |
+| 6 | **Compra (carrito → pago → post-venta)** 🔒 | cart · checkout1 · **seguimiento** ✓ | `2-cart-empty` · `2-money-path` · `2-seguimiento` ✓ | `3-money-path-purchase` ✓ (mutante 🔒) | `5-mobile` ✓ (carrito 375px) |
+| 7 | **Mi cuenta** 🔒 | login · signup · forgot ✓ | `2-customer` · `2-pci-baseline` · `1-forms` ✓ | `1-login` ✓ (mutante 🔒) | `5-mobile` ✓ (customer 375px @auth) |
 
-> **Nota Responde:** el spec original marcaba Header/Footer y Mi cuenta como "—". Aquí Mi cuenta SÍ tiene Responde
-> (login/signup/forgot/seguimiento son URLs de health reales) → su celda enciende. Header/Footer queda "—" a propósito:
-> el cascarón global se verifica como Estructura en **toda** página, no tiene URL propia.
+> **Nota Responde:** Header/Footer queda "—" a propósito: el cascarón global se verifica como Estructura en **toda**
+> página, no tiene URL propia (su link-check de salud vive en la transversal "Errores y enlaces", abajo).
+> **Cambios de taxonomía (s29):** (a) **Seguimiento** `/traking/` pasó de Mi cuenta → **Compra** (es post-venta y
+> **anónimo**: se entra con nº de pedido, sin sesión). (b) **Nosotros/Blog/Recursos** se adoptaron en
+> **Institucional / Contenido** (eran páginas B2C reales sin área — hueco MECE). (c) `1-forms`
+> (login/signup/forgot) se sumó a la Estructura de Mi cuenta (antes corría solo vía `check-all`).
+> (d) **Responde** ahora es simétrico con Estructura: FAQ/distribuidores/legales/hub de servicios ya tienen check 200.
 
 ## Calidad transversal (site-wide, fuera del mapa)
 
@@ -46,9 +50,10 @@ No caben como columnas (lo harían ilegible). Sección propia.
 
 | Categoría | Estado | Cubre |
 |---|---|---|
-| Errores y enlaces | ⏳ (F3) | consola JS nueva · links a **destino correcto** (BUG-003) · 404/catchall (BUG-518) |
-| Performance | ⏳ (F3) | Lighthouse / Core Web Vitals (Home, PDP) |
+| Errores y enlaces | ✓ | `6-xcut` (`@xcut`) — excepciones JS no capturadas (Home·Categoría·Contacto) · 404/catchall (BUG-518) · **`0-links`** (`@xcut`) link-check de header/footer (internos 200). El "link a destino correcto" (BUG-003) lo vigila el guard en `1-global-layout`. _Nota s29: `0-links` se movió de `@health` a `@xcut` — antes se colaba en el Responde de las 7 áreas; ahora corre una vez aquí._ |
+| Performance | ✓ | `8-perf` (`@perf`) — Lighthouse mobile en Home + PDP. Anti-flaky: categorías deterministas (a11y/bp/seo) con piso cercano al baseline; perf-score + Core Web Vitals solo con pisos de catástrofe. On-demand (`npm run check:b2c:perf`), fuera del run rápido. |
 | PCI (baseline) | ✓ | `2-pci-baseline` — guard expected-fail de BUG-119 (PAN en detalle de pedido) |
+| Centinelas de bloqueo | ✓ | `9-centinelas` (`@bloqueo`) — vigilan muros **externos** (fix NO nuestro): reseñas E2E (BUG-566), correo "entregado" (gate de fulfillment real), forgot-prod sin inbox. Cubren la parte no-rota y dejan la rota como guard que se pone verde solo al arreglarse. On-demand (`npm run check:b2c:bloqueos`). Ver sección abajo. |
 
 ## Bugs conocidos vigilados (baseline ejecutable)
 
@@ -66,12 +71,16 @@ No cargan celdas del mapa — viven en su propia línea. Si uno **pasa** (se arr
 Estas celdas están **diseñadas pero sin prueba**. Orden de `../diseno-dashboard.md` §8–9.
 
 1. ~~**Flujo Catálogo/PDP a fondo (F7)**~~ **✅ N1 (s27):** `7-pdp-flujo.contract.spec.js` (`@flujo`) — galería muestra ESTE producto (SKU en `<img>`), acordeones `<details>` abren, compra habilitada por CP (seed). El add-to-cart que **persiste** ya vive en `2-money-path @auth`. _Resta (no bloqueante): filtros/orden de categoría._
-2. **Móvil 375px** — `5-mobile.contract.spec.js`: **PDP y catálogo a 375px ACTIVOS y verdes** (overflow REAL por intento-de-scroll, viewport 375 explícito). **Home (hamburguesa/menú) parqueado** (`test.skip` por test): el menú es handler Qwik `on:click` sin `<input>` y `.mobile-menu` aparece duplicado (BUG-005) → abrir+asertar necesita inspección de DOM en vivo. El panel mantiene la columna Móvil como ⏳ (no corre móvil por área).
-3. **Calidad transversal (F3)** — specs nuevos: consola JS · links a destino · 404 · Lighthouse.
-4. **Flujos de área restantes** — buscador (Header) · selector de soluciones (Home) · compra de servicio (Servicios) · contacto submit / faq acordeón / distribuidores encadenado (Institucional).
-5. **Móvil de Compra/Mi cuenta** — los mutantes a 375px.
+2. ~~**Móvil 375px**~~ **✅ COLUMNA COMPLETA — las 7 áreas (s28):** `5-mobile.contract.spec.js` — 9 tests verdes. Home desparqueado (el parqueo era selector equivocado: `label[for="open-menu"]` es un artefacto 0x0; el real es `button[aria-label="Abrir menú"]` → monta `.mobile-menu-content`). Resto de áreas a 375px (footer global · servicios · contacto · carrito · customer @auth) con shell que renderiza sin overflow real. El panel corre Móvil por área (acción `area-movil`, recorta `5-mobile` por título; quoting de `q()` arreglado para patrones con espacios).
+3. ~~**Calidad transversal (F3)**~~ **✅ cerrada (s28):** consola JS + 404/catchall (`6-xcut`) · Lighthouse/CWV (`8-perf`). Resta de roadmap (otra ronda): a11y · SEO/meta · seguridad (PII/cookies/headers) · regresión visual.
+4. **Flujos de área** — **✅ (s28–29):** `9-flujo-areas.contract.spec.js` cubre buscador (Header → SRP), selector de soluciones (Home → categoría) y contacto (Institucional). **Servicios:** `7-servicios-flujo` (`@flserv`) cotiza → mete el servicio al carrito (variante A/B **pineada** → ya no es bloqueo, solo el **pago** queda diferido por mutante). _Resta (residual):_ faq acordeón (BUG-091, mecanismo dudoso) · distribuidores encadenado (selects + Google Maps).
+5. ~~**Móvil de Compra/Mi cuenta**~~ **✅ (s28)** — carrito 375px (anónimo) y customer 375px (@auth, skip sin sesión). Cierra la columna Móvil.
+6. ~~**Taxonomía incompleta**~~ **✅ (s29):** Nosotros/Blog/Recursos adoptados en Institucional/Contenido · Seguimiento movido a Compra · `1-forms` en Estructura de Mi cuenta · Responde simetrizado · cascarón profundizado (chatbot/newsletter/promo).
 
-> Lo bloqueado por causa externa (no es gap nuestro): BUG-457 wizard A/B inestable · BUG-566 reseñas rotas E2E · forgot-password no verificable en prod · `Delivered`→"entregado" irreproducible vía CT.
+> **Bloqueos externos — ahora VIGILADOS, no invisibles** (`9-centinelas`, `@bloqueo`). El fix NO es nuestro, pero
+> se cubre la parte no-rota y la rota flippea sola al arreglarse: BUG-566 reseñas E2E · `Delivered`→"entregado"
+> (gate de fulfillment real) · forgot-password en prod (sin inbox). _BUG-457 (wizard A/B) **dejó de ser bloqueo**:
+> se disolvió pineando `builderVisitorId` → es el Flujo de Servicios._
 
 ## Evidencias — dónde y cómo se guardan
 

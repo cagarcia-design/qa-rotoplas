@@ -1,18 +1,25 @@
 // tests/0-links.contract.spec.js
-// CAPA 0 · HEALTH — Link-check del cascarón (header + footer).
+// CALIDAD TRANSVERSAL · ERRORES Y ENLACES — Link-check del cascarón (header + footer).
 // Extrae TODOS los <a href> del header y footer y verifica que los INTERNOS
 // respondan 200. Automatiza la tarea recurrente de "revisar el footer" — atrapa
 // el link roto clásico (404/500) que un contract de presencia NO ve.
+//
+// CATEGORÍA (auditoría taxonomía s29): es transversal (site-wide), NO la dimensión
+// "Responde" de un área. Antes estaba taggeado @health → se colaba en el Responde
+// de las 7 áreas (mismo check del home ×7, y COBERTURA lo listaba como Estructura
+// del cascarón, que es falso). Ahora es @xcut → corre UNA vez junto a 6-xcut
+// (Errores y enlaces) vía la acción transversal del panel.
 //
 // Diseño: los externos (corporativo, redes, PDFs, b2b) se reportan aparte SIN
 // reprobar el run (third-parties bloquean bots / caen sin que sea culpa del B2C).
 // El test reprueba solo si un link INTERNO está roto.
 //
-// Correr: npm run check:b2c:health
+// Tag: @xcut
+// Correr: npm run check:b2c:xcut
 
 const { test, expect, irA, statusDe, scrollAlFondo } = require('./_helpers');
 
-test.describe('@health Link-check del cascarón (header + footer)', () => {
+test.describe('@xcut Link-check del cascarón (header + footer)', () => {
 
   test('Todos los links INTERNOS de header y footer responden 200', async ({ page, request }) => {
     await irA(page, '/');
