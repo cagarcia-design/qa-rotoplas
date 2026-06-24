@@ -27,7 +27,7 @@
 
 require('dotenv').config();
 const http = require('http');
-const { spawn } = require('child_process');
+const { spawn, exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const { URL } = require('url');
@@ -534,21 +534,54 @@ const server = http.createServer(async (req, res) => {
   res.writeHead(404); res.end('not found');
 });
 
-// Reintenta el bind ante EADDRINUSE: durante un /restart el proceso saliente aún
-// retiene el puerto unos ms → el relevo espera (hasta ~6s) en vez de morir.
-let bindTries = 0;
+// Libera el puerto matando a quien lo retenga (una instancia ANTERIOR del panel,
+// típicamente un proceso zombie de una corrida pasada). Windows: netstat + taskkill;
+// POSIX: lsof + kill. Es seguro: en este punto aún no escuchamos, así que el dueño
+// del puerto es SIEMPRE otro proceso, nunca nosotros.
+function freePort(port) {
+  return new Promise((resolve) => {
+    const done = () => setTimeout(resolve, 500);
+    if (process.platform === 'win32') {
+      exec('netstat -ano', (err, out) => {
+        if (err) return resolve();
+        const pids = new Set();
+        (out || '').split('\n').forEach((line) => {
+          const m = line.match(/:(\d+)\s+\S+\s+LISTENING\s+(\d+)/i);
+          if (m && m[1] === String(port)) pids.add(m[2]);
+        });
+        if (!pids.size) return resolve();
+        let n = pids.size;
+        pids.forEach((pid) => exec(`taskkill /F /PID ${pid}`, () => { if (--n === 0) done(); }));
+      });
+    } else {
+      exec(`lsof -ti tcp:${port}`, (err, out) => {
+        const pids = (out || '').trim().split('\n').filter(Boolean);
+        if (!pids.length) return resolve();
+        exec(`kill -9 ${pids.join(' ')}`, done);
+      });
+    }
+  });
+}
+
+// Arranque "siempre gana": si el puerto está ocupado, reemplaza la instancia vieja
+// (la mata y vuelve a enlazar) en vez de rendirse. Así `npm run dashboard` siempre
+// te da el panel ACTUAL, nunca el viejo. El reintento de bind cubre el handoff de
+// /restart, donde el proceso saliente suelta el puerto en unos ms.
+let takeoverTried = false, bindTries = 0;
 server.on('error', (e) => {
-  if (e.code === 'EADDRINUSE' && bindTries < 15) {
-    bindTries++;
-    setTimeout(() => server.listen(PORT, HOST), 400);
-    return;
-  }
   if (e.code === 'EADDRINUSE') {
-    console.error(`\n  ✗ El puerto ${PORT} ya está en uso. Quizá el panel ya está corriendo.`);
-    console.error(`    Abre http://${HOST}:${PORT}  ·  o usa otro puerto:  DASH_PORT=4600 npm run dashboard\n`);
-  } else {
-    console.error(`\n  ✗ Error del server: ${e.message}\n`);
+    if (!takeoverTried) {
+      takeoverTried = true;
+      console.log(`\n  ↻ El puerto ${PORT} estaba ocupado por una instancia anterior — reemplazándola…\n`);
+      freePort(PORT).then(() => server.listen(PORT, HOST));
+      return;
+    }
+    if (bindTries < 15) { bindTries++; setTimeout(() => server.listen(PORT, HOST), 400); return; }
+    console.error(`\n  ✗ El puerto ${PORT} sigue ocupado y no se pudo liberar.`);
+    console.error(`    Usa otro puerto:  DASH_PORT=4600 npm run dashboard\n`);
+    process.exit(1);
   }
+  console.error(`\n  ✗ Error del server: ${e.message}\n`);
   process.exit(1);
 });
 

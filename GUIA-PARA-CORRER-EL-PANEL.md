@@ -19,9 +19,7 @@ npm install
 `npm install` también descarga el navegador que usan los checks (Chromium). No hay paso extra.
 
 > **Commercetools:** solicita el archivo `.env` al responsable del proyecto y déjalo en la raíz.
-> No está en GitHub porque contiene secretos. Sin él, "Revisar sitio" funciona igual;
-> solo el flujo de correos lo necesita.
-
+>
 ## Correr
 
 ```
@@ -75,7 +73,7 @@ deshabilitados.
 | Síntoma | Qué hacer |
 |---|---|
 | `node` no se reconoce | Node no quedó instalado, o no reiniciaste la terminal. |
-| Puerto 4599 ocupado | El panel ya está corriendo: usa la pestaña que ya tienes abierta. |
+| Puerto 4599 ocupado | Ya se resuelve solo: al arrancar, el panel **reemplaza** cualquier instancia anterior pegada al puerto, así que `npm run dashboard` siempre te da el panel actual. Si aun así fallara, usa otro puerto: `DASH_PORT=4600 npm run dashboard`. |
 | Checks en rojo con "browser not found" | Corre `npx playwright install chromium`. |
 | Login o carrito se saltan (ámbar/omitido) | Falta sesión: abre **Ajustes ⚙ → Generar sesión B2C**, o corre `npm run auth:b2c`. |
 | Botón **Actualizar** da error | El mensaje en pantalla explica la causa. Lo más común: **sin internet** (revisa conexión / VPN) o **archivos ocupados** (cierra VS Code u otras terminales abiertas en esta carpeta y reintenta). Si aparece "cambios locales" o "conflicto", resuélvelo con git (guarda o descarta los cambios locales); el panel sigue funcionando con la versión actual. |
