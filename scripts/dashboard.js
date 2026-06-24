@@ -466,6 +466,12 @@ const server = http.createServer(async (req, res) => {
       areas: AREA_ORDER.map((k) => ({
         key: k, label: AREAS[k].label, desc: AREAS[k].desc || null, lock: !!AREAS[k].lock, auth: !!AREAS[k].auth,
         responde: !!AREAS[k].responde, respondeCount: respondeCount(k),
+        // URLs que cubre la dimensión "Responde" del área (nombre + ruta) → el panel
+        // las lista en el detalle colapsable, para saber QUÉ se prueba antes de correr.
+        respondeUrls: HEALTH_URLS.filter((u) => u.area === k).map((u) => {
+          let p = u.url; try { p = new URL(u.url).pathname; } catch (_) { /* deja la url */ }
+          return { nombre: u.nombre, path: p };
+        }),
         files: AREAS[k].files, flujo: AREAS[k].flujo || null, flujoLabel: AREAS[k].flujoLabel || null,
         movil: AREAS[k].movil || null, movilLabel: AREAS[k].movilLabel || null,
       })),
@@ -760,12 +766,28 @@ const PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8">
  /* Mapa por área */
  .maprow{background:#fbfdff;border:1px solid var(--line);border-radius:12px;margin-bottom:7px;overflow:hidden;transition:border-color .14s}
  .maprow:hover{border-color:#cfe3f2}
- .maprow-h{display:flex;align-items:center;gap:9px;padding:9px 13px}
+ .maprow-h{display:flex;align-items:center;gap:9px;padding:9px 13px;cursor:pointer;user-select:none}
+ .maprow-h .mchev{flex:none;width:18px;height:18px;color:var(--mut);transition:transform .18s}
+ .maprow-h .mchev svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+ .maprow.collapsed .mchev{transform:rotate(-90deg)}
+ .maprow:hover .mchev{color:var(--rotd)}
  .maprow-h .anmwrap{display:flex;flex-direction:column;gap:1px;min-width:0}
  .maprow-h .anm{font-weight:700;font-size:13.5px;color:var(--ink);display:flex;align-items:center;gap:7px}
  .maprow-h .adesc{font-weight:400;font-size:11px;color:var(--mut);line-height:1.2}
  .maprow-h .lock{font-size:11px;opacity:.6}
  .maprow-h .sp{flex:1}
+ .maprow.collapsed .cells,.maprow.collapsed .area-detail{display:none}
+ /* Detalle: QUÉ prueba cada dimensión (URLs, specs) — visible al expandir */
+ .area-detail{padding:2px 13px 12px;display:flex;flex-direction:column;gap:7px}
+ .adblock{background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px 11px}
+ .adblock .adh{font-size:10px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;color:var(--rotd);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+ .adblock .adh .adtag{font-size:9.5px;color:var(--mut);background:var(--line2);border:1px solid var(--line);border-radius:999px;padding:1px 6px;font-weight:600;letter-spacing:0;text-transform:none}
+ .adblock .adbody{font-size:12px;color:var(--ink2);line-height:1.45}
+ .adurls{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+ .adurls li{display:flex;gap:8px;align-items:baseline;font-size:12px}
+ .adurls .un{color:var(--ink);font-weight:600;min-width:120px}
+ .adurls .up{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--mut)}
+ .adblock.muted{opacity:.62}
  .cells{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0 13px 11px}
  @media(max-width:720px){.cells{grid-template-columns:repeat(2,1fr)}}
  .cell{display:flex;flex-direction:column;gap:4px;align-items:flex-start;text-align:left;padding:7px 9px;border:1px solid var(--line);
@@ -1566,12 +1588,46 @@ function cellValText(area,dim){
  if(dim==='movil')return area.movil?(area.movilLabel||'375px'):'⏳ parqueado';
  return '⏳ parqueado';
 }
+// Detalle descriptivo del área: QUÉ prueba cada dimensión y SOBRE QUÉ URLs/specs,
+// para entenderlo ANTES de correr. Se muestra al expandir el área.
+function buildAreaDetail(a){
+ var d=document.createElement('div');d.className='area-detail';
+ function blk(titulo,tag,muted){
+  var b=document.createElement('div');b.className='adblock'+(muted?' muted':'');
+  var hh=document.createElement('div');hh.className='adh';hh.appendChild(document.createTextNode(titulo));
+  if(tag){var t=document.createElement('span');t.className='adtag';t.textContent=tag;hh.appendChild(t);}
+  b.appendChild(hh);var body=document.createElement('div');body.className='adbody';b.appendChild(body);d.appendChild(b);return body;
+ }
+ // Responde — lista las URLs reales que se piden (200 + render).
+ var rBody=blk('Responde','200 + renderiza',!a.responde);
+ if(a.responde&&a.respondeUrls&&a.respondeUrls.length){
+  var ul=document.createElement('ul');ul.className='adurls';
+  a.respondeUrls.forEach(function(u){
+   var li=document.createElement('li');
+   var n=document.createElement('span');n.className='un';n.textContent=u.nombre;
+   var p=document.createElement('span');p.className='up';p.textContent=u.path;
+   li.appendChild(n);li.appendChild(p);ul.appendChild(li);
+  });
+  rBody.appendChild(ul);
+ } else { rBody.textContent='El cascarón global se verifica en TODA página; no tiene URL propia.'; }
+ // Estructura — qué specs y qué comprueban.
+ blk('Estructura','elementos críticos').textContent=
+   'Comprueba que los elementos clave existan (que no desaparecieron). Specs: '+a.files.join(' · ');
+ // Flujo — efecto real.
+ blk('Flujo','hace lo que promete',!a.flujo).textContent=
+   a.flujo?((a.flujoLabel||'flujo')+(a.lock?' · muta datos reales (QA-only 🔒)':'')):'Sin prueba aún (pendiente).';
+ // Móvil.
+ blk('Móvil','375px',!a.movil).textContent=
+   a.movil?(a.movilLabel||'misma estructura a 375px'):'Parqueado (sin prueba móvil).';
+ return d;
+}
 function buildMap(areas){
  var host=byId('map');if(!host)return;host.innerHTML='';
  areas.forEach(function(a){
   AREA_LABELS[a.key]=a.label;
-  var row=document.createElement('div');row.className='maprow';
+  var row=document.createElement('div');row.className='maprow collapsed'; // siempre colapsada al cargar
   var h=document.createElement('div');h.className='maprow-h';
+  var chev=document.createElement('span');chev.className='mchev';chev.innerHTML='<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>';h.appendChild(chev);
   var nmWrap=document.createElement('div');nmWrap.className='anmwrap';
   var nm=document.createElement('span');nm.className='anm';nm.textContent=a.label;
   if(a.lock){var lk=document.createElement('span');lk.className='lock';lk.textContent='🔒';nm.appendChild(lk);}
@@ -1579,11 +1635,14 @@ function buildMap(areas){
   if(a.desc){var dsc=document.createElement('span');dsc.className='adesc';dsc.textContent=a.desc;nmWrap.appendChild(dsc);}
   h.appendChild(nmWrap);
   var sp=document.createElement('span');sp.className='sp';h.appendChild(sp);
-  // Botón "correr área" = sus dimensiones de lectura (Responde + Estructura).
+  // Botón "correr área" = sus dimensiones de lectura (Responde + Estructura + Móvil).
   var rb=document.createElement('button');rb.className='btn-sec';rb.setAttribute('data-cell','area-read');rb.setAttribute('data-area',a.key);
   rb.innerHTML='<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Correr área';
-  rb.addEventListener('click',function(){runAreaRead(a.key);});
-  h.appendChild(rb);row.appendChild(h);
+  rb.addEventListener('click',function(ev){ev.stopPropagation();row.classList.remove('collapsed');runAreaRead(a.key);});
+  h.appendChild(rb);
+  // Clic en el encabezado expande/colapsa el área (no cuando se pulsa "Correr área").
+  h.addEventListener('click',function(){row.classList.toggle('collapsed');});
+  row.appendChild(h);
   var cells=document.createElement('div');cells.className='cells';
   DIMS.forEach(function(dim){
    var cfg=cellCfg(a,dim.key);
@@ -1607,7 +1666,7 @@ function buildMap(areas){
    }
    cells.appendChild(cell);
   });
-  row.appendChild(cells);host.appendChild(row);
+  row.appendChild(cells);row.appendChild(buildAreaDetail(a));host.appendChild(row);
  });
  restorePills();renderSalud();renderCobertura();
  if(ENV==='prod')applyEnv('prod');
